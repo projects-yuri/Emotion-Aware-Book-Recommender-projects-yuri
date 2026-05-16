@@ -1,0 +1,14 @@
+# ============================================================
+# RECOMENDADOR LITERÁRIO — Dependências
+# Para instalar tudo de uma vez, rode no terminal:
+# pip install -r requirements.txt
+# ============================================================
+
+pymongo
+sentence-transformers
+scikit-learn
+numpy
+pandas
+anthropic
+streamlit
+flask
