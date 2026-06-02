@@ -62,7 +62,7 @@ def carregar_dados() -> pd.DataFrame:
     except ConnectionFailure as e:
         raise RuntimeError(f"MongoDB não está rodando: {e}")
 
-    collection = client["admin"]["Book_Dataset_V2"]
+    collection = client["admin"]["Book_Dataset_V3"]
     docs = list(collection.find())
     df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
     df = df.reset_index(drop=True)
@@ -81,17 +81,41 @@ def carregar_dados() -> pd.DataFrame:
 # ============================================================
 # 2. PRÉ-PROCESSAMENTO
 # ============================================================
+
 SINONIMOS = {
-    "triste":      "melancólico saudade tristeza luto",
-    "feliz":       "alegre otimista esperança eufórico",
-    "tenso":       "ansioso suspense medo angústia",
-    "épico":       "grandioso heróico batalha guerra",
-    "romântico":   "amor romance paixão afeto",
-    "intenso":     "emocionante forte dramático",
-    "misterioso":  "suspense thriller enigma crime",
-    "reflexivo":   "introspecção autoconhecimento propósito significado",
-    "inspirado":   "superação conquista determinação coragem",
-    "nostálgico":  "nostalgia memórias passado saudade",
+    # Emoções positivas → espelha (mantém)
+    "feliz":       "alegre otimista esperança eufórico celebração conquista",
+    "inspirado":   "superação conquista determinação coragem realizacao vitoria",
+    "nostálgico":  "nostalgia memórias passado saudade afeto familiaridade",
+    "romântico":   "amor romance paixão afeto conexão ternura",
+    "reflexivo":   "introspecção autoconhecimento propósito significado crescimento",
+
+    # Emoções negativas → redireciona para o antídoto
+    "triste":      "reconfortante esperança superação acolhimento cura renascimento leveza alegria",
+    "ansioso":     "calma serenidade equilíbrio paz mindfulness leveza clareza acolhimento",
+    "entediado":   "aventura descoberta fascinante emocionante surpreendente viagem imaginação",
+    "épico":       "grandioso heróico batalha guerra coragem determinação",
+    "misterioso":  "suspense thriller enigma crime investigação revelação",
+    "intenso":     "emocionante dramático transformador marcante",
+}
+
+# Mapeia emoção detectada → perfil de busca terapêutico
+# Emoções negativas buscam o antídoto; positivas espelham
+MAPA_TERAPEUTICO: dict[str, str] = {
+    # Negativas → antídoto
+    "triste":     "reconfortante esperança superação acolhimento cura leveza alegria renascimento",
+    "ansioso":    "calma serenidade equilíbrio paz clareza acolhimento leveza tranquilidade",
+    "entediado":  "aventura descoberta fascinante emocionante surpreendente imaginação viagem",
+
+    # Positivas → espelha
+    "feliz":      "alegre otimista esperança celebração conquista eufórico",
+    "inspirado":  "superação conquista determinação coragem realizacao vitoria",
+    "romântico":  "amor romance paixão afeto conexão ternura",
+    "reflexivo":  "introspecção autoconhecimento propósito significado crescimento filosofia",
+    "nostálgico": "nostalgia memórias passado saudade afeto familiaridade ternura",
+
+    # Neutro → não altera
+    "neutro":     "",
 }
 
 # FIX: CONTRASTES estava referenciado em classificar_ambiguidade mas nunca definido
@@ -132,39 +156,78 @@ def construir_perfil(row) -> str:
 # ============================================================
 # 3. ANÁLISE DE SENTIMENTOS AMBÍGUOS
 # ============================================================
+
 EMOCOES_KEYWORDS: dict[str, list[str]] = {
     "feliz":      ["feliz", "alegre", "animado", "contente", "bem", "ótimo",
                    "eufórico", "empolgado", "esperançoso", "positivo",
                    "satisfeito", "entusiasmado", "realizado", "empolgante",
                    "celebrar", "comemorando", "promoção", "conquista"],
-    "triste":     ["triste", "mal", "deprimido", "depressão", "melancólico",
-                   "chateado", "abatido", "desmotivado", "desolado", "angustiado",
-                   "sofrendo", "luto", "saudade", "vazio", "perdido",
-                   "sozinho", "solidão", "isolado", "abandonado", "magoado",
-                   "decepcionado", "frustrado", "sem saída", "chorando"],
-    "ansioso":    ["ansioso", "nervoso", "nervosismo", "preocupado", "tenso",
-                   "inquieto", "estressado", "estresse", "agitado", "apreensivo",
-                   "inseguro", "assustado", "raiva", "irritado", "revoltado",
-                   "frustração", "pressão", "sobrecarregado", "esgotado"],
-    "reflexivo":  ["repensar", "refletir", "reflexivo", "pensar", "questionar",
-                   "buscar", "entender", "descobrir", "crescer", "mudar",
-                   "recomeçar", "propósito", "significado", "identidade",
-                   "autoconhecimento", "curioso", "curiosidade", "filosófico",
-                   "filosofia", "sentido da vida", "sentido", "introspecção",
-                   "meditação", "consciência", "existencial"],
-    "romântico":  ["amor", "apaixonado", "romântico", "relacionamento",
-                   "paixão", "quero romance", "coração partido", "fim do relacionamento",
-                   "término", "separação", "ex", "saudade de alguém"],
-    "entediado":  ["entediado", "monótono", "cansado", "rotina", "sem graça",
-                   "precisando de algo novo", "precisando de aventura", "tédio",
-                   "mesmice", "parado", "estagnado"],
-    "inspirado":  ["inspirado", "motivado", "motivação", "superação",
-                   "conquista", "determinado", "força", "coragem",
-                   "quero melhorar", "quero crescer", "quero aprender",
-                   "desenvolvimento", "produtividade", "objetivo", "meta",
-                   "investimento", "carreira", "profissional", "confiança"],
-    "nostálgico": ["nostalgia", "infância", "passado", "memórias",
-                   "lembranças", "tempos antigos", "saudade do passado"],
+    "triste":     [
+    "triste", "tristeza", "mal", "deprimido", "depressão", "melancólico",
+    "melancolia", "chateado", "abatido", "desmotivado", "desolado", "angustiado",
+    "angústia", "sofrendo", "sofrimento", "luto", "saudade", "vazio", "perdido",
+    "sozinho", "solidão", "isolado", "abandonado", "magoado", "mágoa",
+    "decepcionado", "decepção", "frustrado", "frustração", "sem saída",
+    "chorando", "choro", "lágrimas", "dor", "coração partido", "coração pesado",
+    "profunda tristeza", "muito triste", "tão triste","péssimo", "péssima", "horrível", "terrível", "terrivel", "horroroso",
+    "mal", "muito mal", "me sinto mal", "sinto mal", "sinto péssimo",
+    "me sinto péssimo", "me sinto horrível", "arrasado", "arrasada",
+    "destruído", "destruída", "acabado", "acabada", "no fundo do poço",
+    "pior", "o pior", "nao consigo", "não consigo", "difícil demais",
+    "pesado", "pesada", "sufocado", "sufocada", "oprimido", "oprimida",
+    "quebrado", "quebrada", "partido", "partida",],
+
+    "ansioso": [
+    "ansioso", "ansiedade", "nervoso", "nervosismo", "preocupado", "preocupação",
+    "tenso", "tensão", "inquieto", "inquietação", "estressado", "estresse",
+    "agitado", "apreensivo", "inseguro", "insegurança", "assustado", "medo",
+    "raiva", "irritado", "irritação", "revoltado", "revolta",
+    "frustração", "pressão", "sobrecarregado", "esgotado", "esgotamento",
+    "péssimo por", "me arrependi", "arrependimento", "culpa", "culpado",
+    "culpada", "vergonha", "envergonhado", "envergonhada", "constrangido",
+],
+
+"feliz": [
+    "feliz", "felicidade", "alegre", "alegria", "animado", "animação",
+    "contente", "bem", "ótimo", "eufórico", "euforia", "empolgado", "empolgação",
+    "esperançoso", "esperança", "positivo", "satisfeito", "satisfação",
+    "entusiasmado", "entusiasmo", "realizado", "realização", "empolgante",
+    "celebrar", "comemorando", "promoção", "conquista", "felicíssimo",
+],
+
+"inspirado": [
+    "inspirado", "inspiração", "motivado", "motivação", "superação",
+    "conquista", "determinado", "determinação", "força", "coragem",
+    "quero melhorar", "quero crescer", "quero aprender",
+    "desenvolvimento", "produtividade", "objetivo", "meta",
+    "investimento", "carreira", "profissional", "confiança", "autoconfiança",
+],
+
+"reflexivo": [
+    "repensar", "refletir", "reflexivo", "reflexão", "pensar", "questionar",
+    "buscar", "entender", "descobrir", "crescer", "mudar", "recomeçar",
+    "propósito", "significado", "identidade", "autoconhecimento", "curioso",
+    "curiosidade", "filosófico", "filosofia", "sentido da vida", "sentido",
+    "introspecção", "meditação", "consciência", "existencial", "existencialismo",
+],
+
+"romântico": [
+    "amor", "apaixonado", "apaixonada", "romântico", "romântica", "relacionamento",
+    "paixão", "quero romance", "coração partido", "fim do relacionamento",
+    "término", "separação", "ex", "saudade de alguém", "me apaixonei",
+    "namoro", "namorado", "namorada",
+],
+
+"entediado": [
+    "entediado", "entediada", "entedio", "tédio", "monótono", "monotonia",
+    "cansado", "cansada", "rotina", "sem graça", "mesmice", "parado", "estagnado",
+    "precisando de algo novo", "precisando de aventura",
+],
+
+"nostálgico": [
+    "nostalgia", "nostálgico", "nostálgica", "infância", "passado", "memórias",
+    "lembranças", "tempos antigos", "saudade do passado", "era melhor antes",
+],
 }
 
 OPOSTOS: dict[str, str] = {
@@ -254,12 +317,25 @@ def classificar_ambiguidade(texto: str, emocoes: list[tuple[str, float]]) -> str
 
 
 def expandir_query_ambigua(texto: str, emocoes: list[tuple[str, float]]) -> list[str]:
+    """
+    Expande a query aplicando redirecionamento terapêutico:
+    - Emoções negativas → busca pelo antídoto emocional
+    - Emoções positivas → espelha o sentimento
+    Mantém o texto original como âncora semântica leve.
+    """
     texto_limpo = limpar_texto(texto)
     queries = []
+
     for emocao, _ in emocoes[:3]:
-        sinonimos = SINONIMOS.get(emocao, "")
-        q = (texto_limpo + " " + sinonimos).strip() if sinonimos else texto_limpo
-        queries.append(q)
+        perfil = MAPA_TERAPEUTICO.get(emocao, "")
+        if perfil:
+            # Antídoto tem peso dominante; texto original entra como contexto leve
+            q = perfil + " " + texto_limpo
+        else:
+            sinonimos = SINONIMOS.get(emocao, "")
+            q = (texto_limpo + " " + sinonimos).strip() if sinonimos else texto_limpo
+        queries.append(q.strip())
+
     return queries or [texto_limpo]
 
 
@@ -1010,6 +1086,15 @@ def rota_feedback():
 def rota_historico():
     return jsonify({"historico": ler_historico_feedback()})
 
+
+# ↓ ADICIONE AQUI ↓
+@app.route("/debug_emocao", methods=["POST"])
+def debug_emocao():
+    body    = request.get_json(force=True)
+    texto   = body.get("query", "")
+    limpo   = limpar_texto(texto)
+    emocoes = detectar_emocoes(texto)
+    return jsonify({"limpo": limpo, "emocoes": emocoes})
 
 # ============================================================
 # 12. INICIALIZAÇÃO
