@@ -1,21 +1,23 @@
 """
-Recomendador Literário — Flask + Backend ML completo
-Versão corrigida.
+Recomendador Literário — Flask + ML + HTTPS + Google Gemini (gratuito)
 
 pip install flask pymongo sentence-transformers scikit-learn
-            numpy pandas anthropic
+            numpy pandas google-generativeai cryptography
 
-Rodar:  python app.py
-Acesso: http://localhost:5000
+Rodar:
+  Windows CMD:
+    set GEMINI_API_KEY=AIzaSy...suachave
+    python Book_code.py
+
+Acesso: https://localhost:5443
 """
 
-import os, re, json, pickle, time, hashlib
+import os, re, json, pickle, time, hashlib, ssl, threading, datetime, ipaddress, math
 import numpy as np
-import math
 import pandas as pd
 from collections import defaultdict
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from sentence_transformers import SentenceTransformer
@@ -26,17 +28,89 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import Pipeline
 
-app = Flask(__name__)
+# ============================================================
+# CONFIGURAÇÕES GERAIS
+# ============================================================
+CERT_FILE  = "cert.pem"
+KEY_FILE   = "key.pem"
+HTTPS_PORT = 5443
+HTTP_PORT  = 5000
 CACHE_PATH    = "embeddings_cache.pkl"
 FEEDBACK_PATH = "feedback_usuario.json"
 
 # ============================================================
-# RATE LIMITING — simples, em memória
+# HTTPS — certificado autoassinado via 'cryptography' (sem pyopenssl)
 # ============================================================
-_rate_recomendar: dict[str, list] = defaultdict(list)
-_rate_feedback:   dict[str, list] = defaultdict(list)
+def gerar_cert_autoassinado():
+    if os.path.exists(CERT_FILE) and os.path.exists(KEY_FILE):
+        print(f"Certificado SSL existente encontrado ({CERT_FILE}).")
+        return
+    try:
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
 
-def _check_rate(cache: dict, ip: str, limite: int, janela_s: int = 60) -> bool:
+        chave = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        nome  = x509.Name([
+            x509.NameAttribute(NameOID.COUNTRY_NAME,           "BR"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "SP"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME,          "Cotia"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME,      "FATEC"),
+            x509.NameAttribute(NameOID.COMMON_NAME,            "localhost"),
+        ])
+        agora = datetime.datetime.now(datetime.timezone.utc)
+        cert  = (
+            x509.CertificateBuilder()
+            .subject_name(nome).issuer_name(nome)
+            .public_key(chave.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(agora)
+            .not_valid_after(agora + datetime.timedelta(days=365))
+            .add_extension(
+                x509.SubjectAlternativeName([
+                    x509.DNSName("localhost"),
+                    x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+                ]), critical=False,
+            )
+            .sign(chave, hashes.SHA256())
+        )
+        with open(KEY_FILE, "wb") as f:
+            f.write(chave.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            ))
+        with open(CERT_FILE, "wb") as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        print(f"Certificado SSL autoassinado gerado com sucesso.")
+    except ImportError:
+        print("Instale o pacote cryptography: pip install cryptography")
+        raise
+
+# ============================================================
+# APPS FLASK
+# ============================================================
+app = Flask(__name__)
+
+redirect_app = Flask("redirect_app")
+
+@redirect_app.route("/", defaults={"path": ""})
+@redirect_app.route("/<path:path>")
+def http_redirect(path):
+    host = request.host.split(":")[0]
+    url  = f"https://{host}:{HTTPS_PORT}/{path}"
+    if request.query_string:
+        url += "?" + request.query_string.decode()
+    return redirect(url, code=301)
+
+# ============================================================
+# RATE LIMITING
+# ============================================================
+_rate_recomendar: dict = defaultdict(list)
+_rate_feedback:   dict = defaultdict(list)
+
+def _check_rate(cache, ip, limite, janela_s=60):
     agora = time.time()
     cache[ip] = [t for t in cache[ip] if agora - t < janela_s]
     if len(cache[ip]) >= limite:
@@ -44,209 +118,126 @@ def _check_rate(cache: dict, ip: str, limite: int, janela_s: int = 60) -> bool:
     cache[ip].append(agora)
     return True
 
-def rate_recomendar(ip: str) -> bool:
-    """Máximo 20 recomendações por minuto por IP."""
-    return _check_rate(_rate_recomendar, ip, limite=20)
-
-def rate_feedback(ip: str) -> bool:
-    """Máximo 60 feedbacks por minuto por IP."""
-    return _check_rate(_rate_feedback, ip, limite=60)
+def rate_recomendar(ip): return _check_rate(_rate_recomendar, ip, 20)
+def rate_feedback(ip):   return _check_rate(_rate_feedback,   ip, 60)
 
 # ============================================================
-# 1. CONEXÃO MONGODB + CARGA DE DADOS
+# 1. MONGODB
 # ============================================================
-def carregar_dados() -> pd.DataFrame:
+def carregar_dados():
     client = MongoClient("mongodb://localhost:27017", serverSelectionTimeoutMS=5000)
     try:
         client.admin.command("ping")
     except ConnectionFailure as e:
         raise RuntimeError(f"MongoDB não está rodando: {e}")
-
     collection = client["admin"]["Book_Dataset_V3"]
     docs = list(collection.find())
-    df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
-    df = df.reset_index(drop=True)
-
+    df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore").reset_index(drop=True)
     scaler = MinMaxScaler()
     if "rating" in df.columns:
         df["rating_norm"] = scaler.fit_transform(
-            pd.to_numeric(df["rating"], errors="coerce")
-            .fillna(0).values.reshape(-1, 1)
+            pd.to_numeric(df["rating"], errors="coerce").fillna(0).values.reshape(-1, 1)
         ).flatten()
     else:
         df["rating_norm"] = 0.5
-
     return df
 
 # ============================================================
 # 2. PRÉ-PROCESSAMENTO
 # ============================================================
-
 SINONIMOS = {
-    # Emoções positivas → espelha (mantém)
-    "feliz":       "alegre otimista esperança eufórico celebração conquista",
-    "inspirado":   "superação conquista determinação coragem realizacao vitoria",
-    "nostálgico":  "nostalgia memórias passado saudade afeto familiaridade",
-    "romântico":   "amor romance paixão afeto conexão ternura",
-    "reflexivo":   "introspecção autoconhecimento propósito significado crescimento",
-
-    # Emoções negativas → redireciona para o antídoto
-    "triste":      "reconfortante esperança superação acolhimento cura renascimento leveza alegria",
-    "ansioso":     "calma serenidade equilíbrio paz mindfulness leveza clareza acolhimento",
-    "entediado":   "aventura descoberta fascinante emocionante surpreendente viagem imaginação",
-    "épico":       "grandioso heróico batalha guerra coragem determinação",
-    "misterioso":  "suspense thriller enigma crime investigação revelação",
-    "intenso":     "emocionante dramático transformador marcante",
+    "feliz":      "alegre otimista esperança eufórico celebração conquista",
+    "inspirado":  "superação conquista determinação coragem realizacao vitoria",
+    "nostálgico": "nostalgia memórias passado saudade afeto familiaridade",
+    "romântico":  "amor romance paixão afeto conexão ternura",
+    "reflexivo":  "introspecção autoconhecimento propósito significado crescimento",
+    "triste":     "reconfortante esperança superação acolhimento cura renascimento leveza alegria",
+    "ansioso":    "calma serenidade equilíbrio paz mindfulness leveza clareza acolhimento",
+    "entediado":  "aventura descoberta fascinante emocionante surpreendente viagem imaginação",
+    "épico":      "grandioso heróico batalha guerra coragem determinação",
+    "misterioso": "suspense thriller enigma crime investigação revelação",
+    "intenso":    "emocionante dramático transformador marcante",
 }
 
-# Mapeia emoção detectada → perfil de busca terapêutico
-# Emoções negativas buscam o antídoto; positivas espelham
-MAPA_TERAPEUTICO: dict[str, str] = {
-    # Negativas → antídoto
+MAPA_TERAPEUTICO = {
     "triste":     "reconfortante esperança superação acolhimento cura leveza alegria renascimento",
     "ansioso":    "calma serenidade equilíbrio paz clareza acolhimento leveza tranquilidade",
     "entediado":  "aventura descoberta fascinante emocionante surpreendente imaginação viagem",
-
-    # Positivas → espelha
     "feliz":      "alegre otimista esperança celebração conquista eufórico",
     "inspirado":  "superação conquista determinação coragem realizacao vitoria",
     "romântico":  "amor romance paixão afeto conexão ternura",
     "reflexivo":  "introspecção autoconhecimento propósito significado crescimento filosofia",
     "nostálgico": "nostalgia memórias passado saudade afeto familiaridade ternura",
-
-    # Neutro → não altera
     "neutro":     "",
 }
 
-# FIX: CONTRASTES estava referenciado em classificar_ambiguidade mas nunca definido
 CONTRASTES = ["mas", "porém", "contudo", "entretanto", "embora", "apesar", "todavia"]
 
-def limpar_texto(texto: str) -> str:
+def limpar_texto(texto):
     texto = str(texto).lower().strip()
     texto = re.sub(r'[^\w\s]', ' ', texto, flags=re.UNICODE)
     texto = re.sub(r'\b\d+\b', ' ', texto)
     return re.sub(r'\s+', ' ', texto).strip()
 
-
-def construir_perfil(row) -> str:
-    """
-    Perfil emocional ponderado.
-    Sinopse incluída com peso 2 (campo mais rico semanticamente),
-    truncada em 300 chars para não dominar o vetor.
-    """
-    campos = {
-        "Sentimento I":  3,
-        "Emoção I":      3,
-        "Sentimento II": 2,
-        "Emoção II":     2,
-        "Gênero":        1,
-    }
+def construir_perfil(row):
+    campos = {"Sentimento I": 3, "Emoção I": 3, "Sentimento II": 2, "Emoção II": 2, "Gênero": 1}
     partes = []
     for campo, peso in campos.items():
         val = limpar_texto(str(row.get(campo, "")))
         if val:
             partes.extend([val] * peso)
-
     sinopse = str(row.get("Sinopse", "")).strip()
     if sinopse and sinopse not in ("nan", "N/A", ""):
         partes.extend([limpar_texto(sinopse[:300])] * 2)
-
     return ' '.join(partes)
 
 # ============================================================
-# 3. ANÁLISE DE SENTIMENTOS AMBÍGUOS
+# 3. DETECÇÃO DE EMOÇÕES
 # ============================================================
-
-EMOCOES_KEYWORDS: dict[str, list[str]] = {
-    "feliz":      ["feliz", "alegre", "animado", "contente", "bem", "ótimo",
-                   "eufórico", "empolgado", "esperançoso", "positivo",
-                   "satisfeito", "entusiasmado", "realizado", "empolgante",
-                   "celebrar", "comemorando", "promoção", "conquista"],
-    "triste":     [
-    "triste", "tristeza", "mal", "deprimido", "depressão", "melancólico",
-    "melancolia", "chateado", "abatido", "desmotivado", "desolado", "angustiado",
-    "angústia", "sofrendo", "sofrimento", "luto", "saudade", "vazio", "perdido",
-    "sozinho", "solidão", "isolado", "abandonado", "magoado", "mágoa",
-    "decepcionado", "decepção", "frustrado", "frustração", "sem saída",
-    "chorando", "choro", "lágrimas", "dor", "coração partido", "coração pesado",
-    "profunda tristeza", "muito triste", "tão triste","péssimo", "péssima", "horrível", "terrível", "terrivel", "horroroso",
-    "mal", "muito mal", "me sinto mal", "sinto mal", "sinto péssimo",
-    "me sinto péssimo", "me sinto horrível", "arrasado", "arrasada",
-    "destruído", "destruída", "acabado", "acabada", "no fundo do poço",
-    "pior", "o pior", "nao consigo", "não consigo", "difícil demais",
-    "pesado", "pesada", "sufocado", "sufocada", "oprimido", "oprimida",
-    "quebrado", "quebrada", "partido", "partida",],
-
-    "ansioso": [
-    "ansioso", "ansiedade", "nervoso", "nervosismo", "preocupado", "preocupação",
-    "tenso", "tensão", "inquieto", "inquietação", "estressado", "estresse",
-    "agitado", "apreensivo", "inseguro", "insegurança", "assustado", "medo",
-    "raiva", "irritado", "irritação", "revoltado", "revolta",
-    "frustração", "pressão", "sobrecarregado", "esgotado", "esgotamento",
-    "péssimo por", "me arrependi", "arrependimento", "culpa", "culpado",
-    "culpada", "vergonha", "envergonhado", "envergonhada", "constrangido",
-],
-
-"feliz": [
-    "feliz", "felicidade", "alegre", "alegria", "animado", "animação",
-    "contente", "bem", "ótimo", "eufórico", "euforia", "empolgado", "empolgação",
-    "esperançoso", "esperança", "positivo", "satisfeito", "satisfação",
-    "entusiasmado", "entusiasmo", "realizado", "realização", "empolgante",
-    "celebrar", "comemorando", "promoção", "conquista", "felicíssimo",
-],
-
-"inspirado": [
-    "inspirado", "inspiração", "motivado", "motivação", "superação",
-    "conquista", "determinado", "determinação", "força", "coragem",
-    "quero melhorar", "quero crescer", "quero aprender",
-    "desenvolvimento", "produtividade", "objetivo", "meta",
-    "investimento", "carreira", "profissional", "confiança", "autoconfiança",
-],
-
-"reflexivo": [
-    "repensar", "refletir", "reflexivo", "reflexão", "pensar", "questionar",
-    "buscar", "entender", "descobrir", "crescer", "mudar", "recomeçar",
-    "propósito", "significado", "identidade", "autoconhecimento", "curioso",
-    "curiosidade", "filosófico", "filosofia", "sentido da vida", "sentido",
-    "introspecção", "meditação", "consciência", "existencial", "existencialismo",
-],
-
-"romântico": [
-    "amor", "apaixonado", "apaixonada", "romântico", "romântica", "relacionamento",
-    "paixão", "quero romance", "coração partido", "fim do relacionamento",
-    "término", "separação", "ex", "saudade de alguém", "me apaixonei",
-    "namoro", "namorado", "namorada",
-],
-
-"entediado": [
-    "entediado", "entediada", "entedio", "tédio", "monótono", "monotonia",
-    "cansado", "cansada", "rotina", "sem graça", "mesmice", "parado", "estagnado",
-    "precisando de algo novo", "precisando de aventura",
-],
-
-"nostálgico": [
-    "nostalgia", "nostálgico", "nostálgica", "infância", "passado", "memórias",
-    "lembranças", "tempos antigos", "saudade do passado", "era melhor antes",
-],
+EMOCOES_KEYWORDS = {
+    "feliz":      ["feliz","felicidade","alegre","alegria","animado","contente","bem","ótimo",
+                   "eufórico","empolgado","esperançoso","positivo","satisfeito","entusiasmado",
+                   "realizado","celebrar","comemorando","promoção","conquista","felicíssimo"],
+    "triste":     ["triste","tristeza","mal","deprimido","depressão","melancólico","melancolia",
+                   "chateado","abatido","desmotivado","desolado","angustiado","angústia",
+                   "sofrendo","sofrimento","luto","saudade","vazio","perdido","sozinho",
+                   "solidão","isolado","abandonado","magoado","mágoa","decepcionado","decepção",
+                   "frustrado","frustração","chorando","choro","lágrimas","dor","péssimo",
+                   "péssima","horrível","terrível","arrasado","arrasada","destruído","destruída"],
+    "ansioso":    ["ansioso","ansiedade","nervoso","nervosismo","preocupado","preocupação",
+                   "tenso","tensão","inquieto","estressado","estresse","agitado","apreensivo",
+                   "inseguro","insegurança","assustado","medo","raiva","irritado","irritação",
+                   "revoltado","frustração","pressão","sobrecarregado","esgotado","culpa",
+                   "culpado","vergonha","envergonhado","constrangido"],
+    "inspirado":  ["inspirado","inspiração","motivado","motivação","superação","conquista",
+                   "determinado","determinação","força","coragem","quero melhorar",
+                   "quero crescer","desenvolvimento","produtividade","objetivo","meta",
+                   "carreira","confiança","autoconfiança"],
+    "reflexivo":  ["repensar","refletir","reflexivo","reflexão","pensar","questionar","buscar",
+                   "entender","descobrir","crescer","mudar","recomeçar","propósito","significado",
+                   "identidade","autoconhecimento","curioso","curiosidade","filosófico",
+                   "filosofia","sentido","introspecção","meditação","consciência","existencial"],
+    "romântico":  ["amor","apaixonado","apaixonada","romântico","romântica","relacionamento",
+                   "paixão","quero romance","coração partido","término","separação","ex",
+                   "me apaixonei","namoro","namorado","namorada"],
+    "entediado":  ["entediado","entediada","entedio","tédio","monótono","monotonia","cansado",
+                   "cansada","rotina","sem graça","mesmice","parado","estagnado"],
+    "nostálgico": ["nostalgia","nostálgico","nostálgica","infância","passado","memórias",
+                   "lembranças","tempos antigos","saudade do passado"],
 }
 
-OPOSTOS: dict[str, str] = {
-    "feliz":      "triste",
-    "triste":     "feliz",
-    "ansioso":    "reflexivo",
-    "inspirado":  "entediado",
-    "entediado":  "inspirado",
-    "romântico":  "reflexivo",
+OPOSTOS = {
+    "feliz": "triste", "triste": "feliz", "ansioso": "reflexivo",
+    "inspirado": "entediado", "entediado": "inspirado", "romântico": "reflexivo",
 }
 
 NEGACOES = {"não", "nao", "nunca", "jamais", "nem", "sem"}
 
-# ── Detecção de crise ──────────────────────────────────────────
 CRISIS_KEYWORDS = [
-    "me matar", "quero morrer", "não quero mais viver", "nao quero mais viver",
-    "tirar minha vida", "me suicidar", "suicídio", "suicidio",
-    "me machucar", "me ferir", "acabar com tudo", "não vale a pena viver",
-    "pensar em morrer", "pensamentos de morte",
+    "me matar","quero morrer","não quero mais viver","nao quero mais viver",
+    "tirar minha vida","me suicidar","suicídio","suicidio",
+    "me machucar","me ferir","acabar com tudo","não vale a pena viver",
+    "pensar em morrer","pensamentos de morte",
 ]
 
 CRISIS_RESPOSTA = (
@@ -257,188 +248,129 @@ CRISIS_RESPOSTA = (
     "Você não precisa passar por isso sozinho."
 )
 
-def detectar_crise(texto: str) -> bool:
-    """Detecta linguagem de crise ou ideação suicida."""
-    texto_lower = texto.lower()
-    return any(kw in texto_lower for kw in CRISIS_KEYWORDS)
+def detectar_crise(texto):
+    return any(kw in texto.lower() for kw in CRISIS_KEYWORDS)
 
-
-def detectar_emocoes(texto: str) -> list[tuple[str, float]]:
-    """
-    word-boundary (\b) evita falsos positivos como "mal" em "maluco".
-    Negação detectada por segmento — "não estou feliz" → triste.
-    """
+def detectar_emocoes(texto):
     texto_limpo = limpar_texto(texto)
-    contagem: dict[str, float] = {}
-
-    segmentos = re.split(r'[,;.]|\b(?:mas|porém|contudo|entretanto|embora)\b',
-                         texto_limpo)
-    segmentos = [s.strip() for s in segmentos if s and s.strip()]
-
-    for segmento in segmentos:
-        palavras_seg = set(segmento.split())
-        negado = bool(palavras_seg & NEGACOES)
-
+    contagem = {}
+    segmentos = re.split(r'[,;.]|\b(?:mas|porém|contudo|entretanto|embora)\b', texto_limpo)
+    segmentos = [s.strip() for s in segmentos if s.strip()]
+    for seg in segmentos:
+        palavras = set(seg.split())
+        negado   = bool(palavras & NEGACOES)
         for emocao, keywords in EMOCOES_KEYWORDS.items():
-            hits = sum(
-                1 for kw in keywords
-                if re.search(r'\b' + re.escape(kw) + r'\b', segmento)
-            )
+            hits = sum(1 for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', seg))
             if hits == 0:
                 continue
-
             if negado:
                 oposto = OPOSTOS.get(emocao)
                 if oposto:
                     contagem[oposto] = contagem.get(oposto, 0) + hits * 0.5
             else:
                 contagem[emocao] = contagem.get(emocao, 0) + hits
-
     if not contagem:
         return [("neutro", 1.0)]
-
-    total = sum(contagem.values())
+    total    = sum(contagem.values())
     ordenado = sorted(contagem.items(), key=lambda x: -x[1])
     return [(e, round(h / total, 3)) for e, h in ordenado]
 
-
-def classificar_ambiguidade(texto: str, emocoes: list[tuple[str, float]]) -> str:
+def classificar_ambiguidade(texto, emocoes):
     if len(emocoes) == 1:
         return "simples"
-    texto_limpo = limpar_texto(texto)
-    # FIX: CONTRASTES agora está definido acima
+    texto_limpo   = limpar_texto(texto)
     tem_contraste = any(c in texto_limpo for c in CONTRASTES)
-    diferenca = abs(emocoes[0][1] - emocoes[1][1])
+    diferenca     = abs(emocoes[0][1] - emocoes[1][1])
     if tem_contraste and diferenca < 0.35:
         return "contraditório"
     if diferenca < 0.30:
         return "ambíguo"
     return "simples"
 
-
-def expandir_query_ambigua(texto: str, emocoes: list[tuple[str, float]]) -> list[str]:
-    """
-    Expande a query aplicando redirecionamento terapêutico:
-    - Emoções negativas → busca pelo antídoto emocional
-    - Emoções positivas → espelha o sentimento
-    Mantém o texto original como âncora semântica leve.
-    """
+def expandir_query_ambigua(texto, emocoes):
     texto_limpo = limpar_texto(texto)
     queries = []
-
     for emocao, _ in emocoes[:3]:
         perfil = MAPA_TERAPEUTICO.get(emocao, "")
         if perfil:
-            # Antídoto tem peso dominante; texto original entra como contexto leve
             q = perfil + " " + texto_limpo
         else:
             sinonimos = SINONIMOS.get(emocao, "")
             q = (texto_limpo + " " + sinonimos).strip() if sinonimos else texto_limpo
         queries.append(q.strip())
-
     return queries or [texto_limpo]
 
-
-def formatar_label_emocoes(emocoes: list[tuple[str, float]], tipo: str) -> str:
+def formatar_label_emocoes(emocoes, tipo):
     nomes = [e for e, _ in emocoes[:3]]
     base  = " + ".join(nomes)
-    if tipo == "contraditório":
-        return f"{base} (contraditório)"
-    if tipo == "ambíguo":
-        return f"{base} (misto)"
+    if tipo == "contraditório": return f"{base} (contraditório)"
+    if tipo == "ambíguo":       return f"{base} (misto)"
     return nomes[0]
 
 # ============================================================
-# 4. EMBEDDINGS COM CACHE POR HASH DE CONTEÚDO
+# 4. EMBEDDINGS COM CACHE
 # ============================================================
 MODELO_NOME = "paraphrase-multilingual-MiniLM-L12-v2"
 
-
-def _hash_dataset(df: pd.DataFrame) -> str:
+def _hash_dataset(df):
     conteudo = '|'.join(
         str(t) + str(s)
-        for t, s in zip(
-            df.get("Título do Livro", pd.Series()).fillna(""),
-            df.get("Sinopse", pd.Series()).fillna(""),
-        )
+        for t, s in zip(df.get("Título do Livro", pd.Series()).fillna(""),
+                        df.get("Sinopse", pd.Series()).fillna(""))
     )
     return hashlib.md5(conteudo.encode()).hexdigest()
 
-
-def carregar_modelo_embeddings(df: pd.DataFrame):
+def carregar_modelo_embeddings(df):
     modelo = SentenceTransformer(MODELO_NOME)
     df["perfil_emocional"] = df.apply(construir_perfil, axis=1)
     hash_atual = _hash_dataset(df)
-
     try:
         with open(CACHE_PATH, "rb") as f:
             cache = pickle.load(f)
-        if (cache.get("modelo") == MODELO_NOME and
-                cache.get("hash_dataset") == hash_atual):
-            print(f"⚡ Embeddings do cache. Shape: {cache['embeddings'].shape}")
+        if cache.get("modelo") == MODELO_NOME and cache.get("hash_dataset") == hash_atual:
+            print(f"Embeddings do cache. Shape: {cache['embeddings'].shape}")
             return modelo, cache["embeddings"]
-        print("⚠️  Cache desatualizado (dataset mudou). Recomputando...")
+        print("Cache desatualizado. Recomputando...")
     except Exception:
         pass
-
-    print("⏳ Computando embeddings (primeira vez ~30s)...")
-    embs = modelo.encode(
-        df["perfil_emocional"].tolist(),
-        show_progress_bar=True, batch_size=32, normalize_embeddings=True,
-    )
+    print("Computando embeddings (primeira vez ~30s)...")
+    embs = modelo.encode(df["perfil_emocional"].tolist(),
+                         show_progress_bar=True, batch_size=32, normalize_embeddings=True)
     with open(CACHE_PATH, "wb") as f:
-        pickle.dump({
-            "modelo":       MODELO_NOME,
-            "hash_dataset": hash_atual,
-            "embeddings":   embs,
-        }, f)
-    print(f"✅ Embeddings salvos. Shape: {embs.shape}")
+        pickle.dump({"modelo": MODELO_NOME, "hash_dataset": hash_atual, "embeddings": embs}, f)
+    print(f"Embeddings salvos. Shape: {embs.shape}")
     return modelo, embs
 
 # ============================================================
-# 5. CLASSIFICADOR COM MÉTRICAS REAIS
+# 5. CLASSIFICADOR
 # ============================================================
-def treinar_classificador(df: pd.DataFrame):
+def treinar_classificador(df):
     df_clf   = df[["Gênero", "Emoção II", "Sentimento I"]].dropna()
     contagem = df_clf["Sentimento I"].value_counts()
     df_clf   = df_clf[df_clf["Sentimento I"].isin(contagem[contagem >= 2].index)]
-
     X = df_clf[["Gênero", "Emoção II"]].apply(
         lambda r: limpar_texto(' '.join(r.astype(str))), axis=1)
     y = df_clf["Sentimento I"]
-
     pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(ngram_range=(1, 2), min_df=1, max_features=5000)),
         ("clf",   LogisticRegression(max_iter=1000, C=1.0, class_weight="balanced")),
     ])
-
-    n         = len(df_clf)
-    n_classes = y.nunique()
-
+    n, n_classes = len(df_clf), y.nunique()
     test_n = max(int(n * 0.2), n_classes + 1)
-
     if n < 10 or test_n >= int(n * 0.6):
         pipeline.fit(X, y)
-        print(f"Classificador treinado no conjunto completo "
-              f"({n} amostras, {n_classes} classes).")
+        print(f"Classificador treinado ({n} amostras, {n_classes} classes).")
     else:
         n_folds = min(3, n // (n_classes + 1))
         if n_folds >= 2:
             try:
-                scores = cross_val_score(pipeline, X, y,
-                                         cv=n_folds, scoring="accuracy")
-                print(f"Classificador — Acurácia CV ({n_folds}-fold): "
-                      f"{scores.mean():.2f} ± {scores.std():.2f}")
-                if scores.mean() < 0.30:
-                    print("⚠️  Acurácia baixa — fallback pode ser pouco confiável.")
+                scores = cross_val_score(pipeline, X, y, cv=n_folds, scoring="accuracy")
+                print(f"Classificador CV ({n_folds}-fold): {scores.mean():.2f} ± {scores.std():.2f}")
             except Exception as e:
                 print(f"Cross-val ignorada: {e}")
-
-        X_tr, _, y_tr, _ = train_test_split(
-            X, y, test_size=test_n, random_state=42, stratify=y)
+        X_tr, _, y_tr, _ = train_test_split(X, y, test_size=test_n, random_state=42, stratify=y)
         pipeline.fit(X_tr, y_tr)
         print(f"Classificador treinado ({n} amostras, {n_classes} classes).")
-
     return pipeline
 
 # ============================================================
@@ -449,8 +381,7 @@ def mmr_rerank(query_emb, candidatos_idx, embeddings, top_k=10, lambda_param=0.7
     for _ in range(min(top_k, len(candidatos))):
         if not candidatos:
             break
-        sims_q = cosine_similarity(
-            query_emb.reshape(1, -1), embeddings[candidatos])[0]
+        sims_q = cosine_similarity(query_emb.reshape(1, -1), embeddings[candidatos])[0]
         sims_s = (
             cosine_similarity(embeddings[candidatos], embeddings[selecionados]).max(axis=1)
             if selecionados else np.zeros(len(candidatos))
@@ -460,38 +391,23 @@ def mmr_rerank(query_emb, candidatos_idx, embeddings, top_k=10, lambda_param=0.7
     return selecionados
 
 # ============================================================
-# 7. RECOMENDAÇÃO — pre_filtro dinâmico + blend ambíguo
+# 7. RECOMENDAÇÃO
 # ============================================================
-def _calcular_pre_filtro(n_docs: int) -> int:
-    if n_docs <= 50:
-        return n_docs
-    if n_docs <= 200:
-        return max(30, n_docs // 2)
-    if n_docs <= 1000:
-        return 60
-    return min(200, n_docs // 8)
+def _calcular_pre_filtro(n):
+    if n <= 50:   return n
+    if n <= 200:  return max(30, n // 2)
+    if n <= 1000: return 60
+    return min(200, n // 8)
 
-
-def recomendar_livros(
-    query: str,
-    emocoes: list[tuple[str, float]],
-    tipo_sentimento: str,
-    top_k: int = 10,
-    peso_semantico: float = 0.7,
-    peso_rating: float = 0.3,
-    usar_mmr: bool = True,
-    lambda_mmr: float = 0.7,
-) -> pd.DataFrame:
-
-    pre_filtro = _calcular_pre_filtro(len(df))
-
-    queries_exp  = expandir_query_ambigua(query, emocoes)
-    pesos_emoc   = [p for _, p in emocoes[:len(queries_exp)]]
-    total_peso   = sum(pesos_emoc)
-    pesos_norm   = [p / total_peso for p in pesos_emoc]
-
-    embs_q = modelo.encode(queries_exp, normalize_embeddings=True)
-
+def recomendar_livros(query, emocoes, tipo_sentimento, top_k=10,
+                      peso_semantico=0.7, peso_rating=0.3,
+                      usar_mmr=True, lambda_mmr=0.7):
+    pre_filtro  = _calcular_pre_filtro(len(df))
+    queries_exp = expandir_query_ambigua(query, emocoes)
+    pesos_emoc  = [p for _, p in emocoes[:len(queries_exp)]]
+    total_peso  = sum(pesos_emoc)
+    pesos_norm  = [p / total_peso for p in pesos_emoc]
+    embs_q      = modelo.encode(queries_exp, normalize_embeddings=True)
     if len(embs_q) == 1:
         emb_final = embs_q[0]
     else:
@@ -499,113 +415,119 @@ def recomendar_livros(
         norma = np.linalg.norm(emb_final)
         if norma > 0:
             emb_final = emb_final / norma
-
     sims          = cosine_similarity(emb_final.reshape(1, -1), embeddings_livros)[0]
     score_hibrido = peso_semantico * sims + peso_rating * df["rating_norm"].values
-
     df_res = df.copy()
     df_res["_score_sem"]   = sims
     df_res["_score_final"] = score_hibrido
-
     top_idx = np.argsort(score_hibrido)[::-1][:pre_filtro].tolist()
-
     lambda_efetivo = lambda_mmr if tipo_sentimento == "simples" else max(0.45, lambda_mmr - 0.1)
     idx_final = (
-        mmr_rerank(emb_final, top_idx, embeddings_livros,
-                   top_k=top_k, lambda_param=lambda_efetivo)
-        if usar_mmr and len(top_idx) > top_k
-        else top_idx[:top_k]
+        mmr_rerank(emb_final, top_idx, embeddings_livros, top_k=top_k, lambda_param=lambda_efetivo)
+        if usar_mmr and len(top_idx) > top_k else top_idx[:top_k]
     )
-
     resultado = df_res.iloc[idx_final].copy()
-
     def gerar_explicacao(row):
         sentimento = row.get("Sentimento I", "") or row.get("Emoção I", "")
-        genero     = row.get("Gênero", "")
         sim_pct    = round(row["_score_sem"] * 100, 1)
-        return f"Match {sim_pct}% — {sentimento}, {genero}"
-
+        return f"Match {sim_pct}% — {sentimento}, {row.get('Gênero', '')}"
     resultado["explicacao"] = resultado.apply(gerar_explicacao, axis=1)
-
     if resultado["_score_sem"].max() < 0.3:
         emocao_dom  = emocoes[0][0] if emocoes else "neutro"
         emocao_pred = pipeline_clf.predict([limpar_texto(query)])[0]
-        alvo = emocao_pred if emocao_dom == "neutro" else emocao_dom
-        fallback = df_res[
-            df_res["Sentimento I"].str.lower() == alvo.lower()
-        ].nlargest(top_k, "rating_norm")
+        alvo     = emocao_pred if emocao_dom == "neutro" else emocao_dom
+        fallback = df_res[df_res["Sentimento I"].str.lower() == alvo.lower()].nlargest(top_k, "rating_norm")
         if not fallback.empty:
             return fallback
-
     colunas = [c for c in [
         "Título do Livro", "Gênero", "Sentimento I", "Emoção I", "Emoção II",
         "Sinopse", "Público-Alvo", "Páginas", "Tamanho do Livro",
         "rating", "_score_sem", "_score_final", "explicacao",
     ] if c in resultado.columns]
-
     return resultado[colunas].reset_index(drop=True)
 
 # ============================================================
-# 8. ANÁLISE DE IA (Claude API)
+# 8. ANÁLISE DE IA — Google Gemini (GRATUITO)
+# Chave em: aistudio.google.com/apikey
+# Variável: set GEMINI_API_KEY=AIzaSy...  (CMD Windows)
 # ============================================================
-_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-_API_KEY_VALIDA = bool(_API_KEY and _API_KEY.startswith("sk-ant-"))
+_API_KEY        = os.environ.get("GEMINI_API_KEY", "").strip()
+_API_KEY_VALIDA = bool(_API_KEY)
 
+_cache_analise: dict = {}
 
-def analisar_top_livro(query: str, livro: dict, tipo_sentimento: str = "simples") -> str:
+def _chave_cache(query, titulo):
+    return hashlib.md5(f"{query}|{titulo}".encode()).hexdigest()
+
+def analisar_top_livro(query, livro, tipo_sentimento="simples"):
     if not _API_KEY_VALIDA:
         return ""
+
+    titulo = livro.get("Título do Livro", "N/A")
+    chave  = _chave_cache(query, titulo)
+    if chave in _cache_analise:
+        return _cache_analise[chave]
+
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=_API_KEY)
+        import google.generativeai as genai
+
+        genai.configure(api_key=_API_KEY)
+        modelo_ia = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=(
+                "Você é um terapeuta literário especialista em biblioterapia. "
+                "Conecte livros ao estado emocional do leitor de forma empática e motivadora. "
+                "Escreva sempre em português brasileiro. Nunca use bullet points."
+            ),
+        )
 
         campos = {
-            "Título":        livro.get("Título do Livro", "N/A"),
-            "Gênero":        livro.get("Gênero", "N/A"),
-            "Sentimento I":  livro.get("Sentimento I", "N/A"),
-            "Sentimento II": livro.get("Sentimento II", "N/A"),
-            "Emoção I":      livro.get("Emoção I", "N/A"),
-            "Emoção II":     livro.get("Emoção II", "N/A"),
-            "Sinopse":       livro.get("Sinopse", "N/A"),
-            "Público-Alvo":  livro.get("Público-Alvo", "N/A"),
-            "Páginas":       livro.get("Páginas", "N/A"),
-            "Score Match":   f"{round(livro.get('_score_sem', 0) * 100, 1)}%",
+            "Título":       titulo,
+            "Gênero":       livro.get("Gênero", "N/A"),
+            "Sentimento I": livro.get("Sentimento I", "N/A"),
+            "Emoção I":     livro.get("Emoção I", "N/A"),
+            "Emoção II":    livro.get("Emoção II", "N/A"),
+            "Sinopse":      livro.get("Sinopse", "N/A"),
+            "Páginas":      livro.get("Páginas", "N/A"),
+            "Match":        f"{round(livro.get('_score_sem', 0) * 100, 1)}%",
         }
         livro_str = "\n".join(f"  {k}: {v}" for k, v in campos.items())
 
         instrucao_extra = {
-            "ambíguo":       "\nO usuário demonstrou sentimentos MISTOS. Reconheça essa complexidade — não simplifique para uma única emoção.",
-            "contraditório": "\nO usuário demonstrou sentimentos CONTRADITÓRIOS. Reconheça essa tensão e explique como o livro pode ajudar a lidar com esse estado dividido.",
+            "ambíguo":       "\nO usuário tem sentimentos MISTOS. Reconheça essa complexidade.",
+            "contraditório": "\nO usuário tem sentimentos CONTRADITÓRIOS. Reconheça essa tensão.",
         }.get(tipo_sentimento, "")
 
-        prompt = f"""Você é um especialista em literatura e psicologia emocional.
+        prompt = f"""O usuário descreveu seu estado emocional:
+"{query}"{instrucao_extra}
 
-O usuário descreveu seu estado emocional da seguinte forma:
-  "{query}"{instrucao_extra}
-
-O sistema selecionou este livro como o #1 mais adequado:
+Livro selecionado como #1:
 {livro_str}
 
-Escreva UMA análise curta (3 a 5 frases), em português, explicando de forma
-pessoal e empática por que este livro é a melhor escolha para o momento do usuário.
+Escreva UMA análise curta (3 a 5 frases) explicando por que este livro é ideal para o momento do usuário.
+Comece EXATAMENTE com: "Esse livro se encaixa com você porque..."
+Apenas prosa fluida, sem bullet points."""
 
-Comece exatamente com: "Esse livro se encaixa com você porque..."
-Sem bullet points. Apenas prosa fluida."""
+        response  = modelo_ia.generate_content(prompt)
+        resultado = response.text.strip()
+        _cache_analise[chave] = resultado
+        return resultado
 
-        r = client.messages.create(
-            model="claude-sonnet-4-20250514", max_tokens=300,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return r.content[0].text.strip()
     except Exception as e:
-        return f"Erro na análise de IA: {e}"
+        erro = str(e)
+        print(f"Erro na API Gemini: {erro}")
+        if "api_key" in erro.lower() or "invalid" in erro.lower():
+            return "⚠️ Chave Gemini inválida."
+        if "quota" in erro.lower() or "rate" in erro.lower():
+            return "⚠️ Limite de requisições atingido. Tente em instantes."
+        return ""
 
 # ============================================================
-# 9. FEEDBACK COM VALIDAÇÃO DE TÍTULO
+# 9. FEEDBACK
 # ============================================================
-def registrar_feedback(titulo: str, util: bool, query: str) -> tuple[bool, str]:
+def registrar_feedback(titulo, util, query):
     if titulo not in _titulos_validos:
-        return False, "Título não encontrado no dataset."
+        return False, "Título não encontrado."
     try:
         with open(FEEDBACK_PATH, "r", encoding="utf-8") as f:
             dados = json.load(f)
@@ -617,8 +539,7 @@ def registrar_feedback(titulo: str, util: bool, query: str) -> tuple[bool, str]:
         json.dump(dados, f, ensure_ascii=False, indent=2)
     return True, "ok"
 
-
-def livros_penalizados() -> set:
+def livros_penalizados():
     try:
         with open(FEEDBACK_PATH, "r", encoding="utf-8") as f:
             dados = json.load(f)
@@ -630,8 +551,7 @@ def livros_penalizados() -> set:
         contagem[t] = contagem.get(t, 0) + (1 if item["util"] else -1)
     return {t for t, s in contagem.items() if s < 0}
 
-
-def ler_historico_feedback() -> list:
+def ler_historico_feedback():
     try:
         with open(FEEDBACK_PATH, "r", encoding="utf-8") as f:
             dados = json.load(f)
@@ -641,10 +561,7 @@ def ler_historico_feedback() -> list:
     for item in dados:
         t = item["titulo"]
         contagem[t] = contagem.get(t, 0) + (1 if item["util"] else -1)
-    return sorted(
-        [{"titulo": t, "score": s} for t, s in contagem.items()],
-        key=lambda x: -x["score"]
-    )
+    return sorted([{"titulo": t, "score": s} for t, s in contagem.items()], key=lambda x: -x["score"])
 
 # ============================================================
 # 10. HTML
@@ -658,443 +575,239 @@ HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background-color: #f4ecd8;
-    font-family: 'Lato', 'Georgia', serif;
-    color: #3d2b1f;
-    min-height: 100vh;
-    padding: 0 16px 60px;
-  }
+  body { background-color: #f4ecd8; font-family: 'Lato','Georgia',serif; color: #3d2b1f; min-height: 100vh; padding: 0 16px 60px; }
   .container { max-width: 740px; margin: 0 auto; padding-top: 48px; }
-
-  .titulo {
-    text-align: center; font-size: 42px; font-weight: bold;
-    color: #5a4634; font-family: 'Playfair Display','Georgia',serif; margin-bottom: 8px;
-  }
-  .subtexto {
-    text-align: center; font-size: 18px; color: #6e5c48;
-    font-family: 'Playfair Display','Georgia',serif; margin-bottom: 32px;
-  }
+  .titulo { text-align: center; font-size: 42px; font-weight: bold; color: #5a4634; font-family: 'Playfair Display','Georgia',serif; margin-bottom: 8px; }
+  .subtexto { text-align: center; font-size: 18px; color: #6e5c48; font-family: 'Playfair Display','Georgia',serif; margin-bottom: 8px; }
+  .https-badge { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 24px; font-size: 13px; color: #256029; }
   .label { font-size: 17px; font-weight: 600; color: #5a4634; margin-bottom: 8px; display: block; }
-
-  textarea {
-    width: 100%; height: 120px;
-    border: 2px solid #8b5e3c !important; border-radius: 10px !important;
-    padding: 12px 14px; font-size: 15px; font-family: 'Lato',sans-serif;
-    background: #fdf8f0; color: #3d2b1f; resize: vertical; outline: none;
-    transition: border-color .2s;
-  }
+  textarea { width: 100%; height: 120px; border: 2px solid #8b5e3c !important; border-radius: 10px !important; padding: 12px 14px; font-size: 15px; font-family: 'Lato',sans-serif; background: #fdf8f0; color: #3d2b1f; resize: vertical; outline: none; transition: border-color .2s; }
   textarea:focus { border-color: #5a4634 !important; }
-
   .btn-row { display: flex; justify-content: space-between; margin-top: 14px; }
-  button {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 20px; font-size: 14px; font-family: 'Lato',sans-serif;
-    border-radius: 8px; cursor: pointer; border: none;
-    transition: opacity .15s, transform .1s; white-space: nowrap;
-  }
+  button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 20px; font-size: 14px; font-family: 'Lato',sans-serif; border-radius: 8px; cursor: pointer; border: none; transition: opacity .15s, transform .1s; }
   button:active { transform: scale(.97); }
   button:disabled { opacity: .5; cursor: not-allowed; }
   #btn-recomendar { background: #8b5e3c; color: #fff; font-weight: 700; }
   #btn-recomendar:hover:not(:disabled) { opacity: .88; }
   #btn-limpar { background: #e8dcc8; color: #5a4634; font-weight: 600; }
-  #btn-limpar:hover { opacity: .80; }
-
-  #spinner {
-    display: none; text-align: center; color: #6e5c48;
-    font-style: italic; margin-top: 18px; font-size: 15px;
-  }
+  #spinner { display: none; text-align: center; color: #6e5c48; font-style: italic; margin-top: 18px; font-size: 15px; }
   #spinner.ativo { display: block; }
-
   hr { border: none; border-top: 1px solid #d6cbb5; margin: 28px 0; }
-
-  .emocao-chip {
-    display: inline-block; background: #d4a86a; color: #fff;
-    border-radius: 20px; padding: 4px 14px; font-size: 13px;
-    font-weight: 700; letter-spacing: .5px; margin-bottom: 16px;
-    text-transform: uppercase;
-  }
-  .livro-card {
-    background: #fdf8f0; padding: 22px 24px; border-radius: 12px;
-    border: 1px solid #e0d6c3; box-shadow: 2px 2px 8px rgba(0,0,0,.05);
-    font-family: 'Georgia',serif; margin-bottom: 14px; line-height: 1.65;
-  }
-  .livro-card b { color: #5a4634; }
-  .livro-titulo {
-    font-size: 20px; font-weight: 700;
-    font-family: 'Playfair Display',serif; color: #3d2b1f; margin-bottom: 10px;
-  }
-  .badge {
-    display: inline-block; background: #e8dcc8; color: #5a4634;
-    border-radius: 6px; padding: 2px 10px; font-size: 12px;
-    font-family: 'Lato',sans-serif; margin: 2px 4px 2px 0;
-  }
+  .emocao-chip { display: inline-block; background: #d4a86a; color: #fff; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 700; letter-spacing: .5px; margin-bottom: 16px; text-transform: uppercase; }
+  .livro-card { background: #fdf8f0; padding: 22px 24px; border-radius: 12px; border: 1px solid #e0d6c3; box-shadow: 2px 2px 8px rgba(0,0,0,.05); font-family: 'Georgia',serif; margin-bottom: 14px; line-height: 1.65; }
+  .livro-titulo { font-size: 20px; font-weight: 700; font-family: 'Playfair Display',serif; color: #3d2b1f; margin-bottom: 10px; }
+  .badge { display: inline-block; background: #e8dcc8; color: #5a4634; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-family: 'Lato',sans-serif; margin: 2px 4px 2px 0; }
   .match-badge { background: #8b5e3c; color: #fff; }
-
-  .bloco-ia {
-    background: #f9f3e8; border-left: 4px solid #8b5e3c;
-    padding: 14px 18px; border-radius: 6px; margin-top: 14px;
-    font-style: italic; color: #5a4634; font-family: 'Georgia',serif; line-height: 1.7;
-  }
-  .bloco-ia b { font-style: normal; }
-
+  .bloco-ia { background: linear-gradient(135deg,#f9f3e8,#fdf6ee); border-left: 4px solid #8b5e3c; padding: 18px 20px; border-radius: 8px; margin-top: 14px; font-style: italic; color: #4a3728; font-family: 'Georgia',serif; line-height: 1.8; }
+  .bloco-ia .ia-header { font-style: normal; font-weight: 700; color: #5a4634; font-family: 'Playfair Display',serif; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .bloco-ia .ia-modelo { font-size: 11px; font-style: normal; color: #9a8070; font-family: 'Lato',sans-serif; margin-left: auto; background: #e8dcc8; padding: 2px 8px; border-radius: 10px; }
   .feedback-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
-  .btn-fb {
-    padding: 6px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;
-    border: 1.5px solid #c9b89a; background: transparent; color: #5a4634;
-    transition: background .15s;
-  }
+  .btn-fb { padding: 6px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; border: 1.5px solid #c9b89a; background: transparent; color: #5a4634; transition: background .15s; }
   .btn-fb:hover { background: #e8dcc8; }
   .btn-fb.ativo-ok  { background: #d4edda; border-color: #4caf50; color: #256029; }
   .btn-fb.ativo-nok { background: #f8d7da; border-color: #e74c3c; color: #7b1d2a; }
   .fb-confirmacao { font-size: 12px; color: #7a6a58; font-style: italic; }
-
   details { margin-top: 10px; }
-  summary {
-    cursor: pointer; font-size: 15px; color: #5a4634; font-weight: 600;
-    padding: 8px 0; list-style: none; display: flex; align-items: center; gap: 6px;
-  }
+  summary { cursor: pointer; font-size: 15px; color: #5a4634; font-weight: 600; padding: 8px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
   summary::-webkit-details-marker { display: none; }
-  .outros-livros { margin-top: 12px; }
-  .outro-item {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 10px 14px; border-radius: 8px; background: #fdf8f0;
-    border: 1px solid #e0d6c3; margin-bottom: 8px; gap: 12px;
-  }
+  .outro-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 14px; border-radius: 8px; background: #fdf8f0; border: 1px solid #e0d6c3; margin-bottom: 8px; gap: 12px; }
   .outro-titulo { font-size: 14px; font-weight: 600; color: #3d2b1f; }
   .outro-meta   { font-size: 12px; color: #7a6a58; margin-top: 3px; }
   .outro-expl   { font-size: 11px; color: #9a8070; margin-top: 4px; font-style: italic; }
-  .outro-fb     { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
-  .outro-fb button {
-    padding: 4px 10px; font-size: 13px; border-radius: 6px;
-    border: 1px solid #c9b89a; background: transparent; color: #5a4634; cursor: pointer;
-    transition: background .15s;
-  }
+  .outro-fb { display: flex; gap: 6px; flex-shrink: 0; }
+  .outro-fb button { padding: 4px 10px; font-size: 13px; border-radius: 6px; border: 1px solid #c9b89a; background: transparent; color: #5a4634; cursor: pointer; }
   .outro-fb button:hover { background: #e8dcc8; }
   .outro-fb button.ativo-ok  { background: #d4edda; border-color: #4caf50; color: #256029; }
   .outro-fb button.ativo-nok { background: #f8d7da; border-color: #e74c3c; color: #7b1d2a; }
-
-  .citacao {
-    text-align: center; font-style: italic; color: #7a6a58;
-    font-size: 14px; margin-top: 24px; font-family: 'Georgia',serif; line-height: 1.6;
-  }
-  .historico-titulo {
-    font-size: 18px; font-weight: 700; color: #5a4634;
-    font-family: 'Playfair Display',serif; margin-bottom: 10px;
-  }
+  .citacao { text-align: center; font-style: italic; color: #7a6a58; font-size: 14px; margin-top: 24px; font-family: 'Georgia',serif; line-height: 1.6; }
+  .historico-titulo { font-size: 18px; font-weight: 700; color: #5a4634; font-family: 'Playfair Display',serif; margin-bottom: 10px; }
   .hist-item { padding: 5px 0; font-size: 14px; color: #3d2b1f; border-bottom: 1px solid #e8dfc8; }
-  .hist-item:last-child { border-bottom: none; }
   .hist-item .score { float: right; font-weight: 700; }
-  .hist-ok  .score { color: #256029; }
+  .hist-ok .score { color: #256029; }
   .hist-nok .score { color: #7b1d2a; }
-  .rodape {
-    text-align: center; font-size: 14px; color: #7a6a58;
-    margin-top: 50px; padding-top: 20px; border-top: 1px solid #d6cbb5;
-    font-family: 'Georgia',serif; line-height: 1.8;
-  }
-  .crise-box {
-    background: #fff3e0; border-left: 4px solid #e65100;
-    padding: 18px 20px; border-radius: 8px; margin-top: 20px;
-    font-family: 'Georgia',serif; line-height: 1.8; color: #3d2b1f;
-  }
+  .rodape { text-align: center; font-size: 14px; color: #7a6a58; margin-top: 50px; padding-top: 20px; border-top: 1px solid #d6cbb5; font-family: 'Georgia',serif; line-height: 1.8; }
+  .crise-box { background: #fff3e0; border-left: 4px solid #e65100; padding: 18px 20px; border-radius: 8px; margin-top: 20px; font-family: 'Georgia',serif; line-height: 1.8; color: #3d2b1f; }
 </style>
 </head>
 <body>
 <div class="container">
-
   <p class="titulo">📖 Recomendador Literário</p>
   <p class="subtexto">Descubra histórias que combinam com o seu momento</p>
-
+  <div class="https-badge">🔒 Conexão segura (HTTPS)</div>
   <label class="label" for="input-texto">💬 Como você está se sentindo hoje?</label>
   <textarea id="input-texto" placeholder="Descreva seu estado emocional, o que busca ou o tipo de história que quer ler..."></textarea>
-
   <div class="btn-row">
     <button id="btn-recomendar" onclick="recomendar()">🔍 Recomendar</button>
-    <button id="btn-limpar"     onclick="limpar()">🧹 Limpar</button>
+    <button id="btn-limpar" onclick="limpar()">🧹 Limpar</button>
   </div>
-
   <div id="spinner">📖 Analisando seu sentimento…</div>
-
   <div id="resultado"></div>
   <div id="historico-section"></div>
-
   <div class="rodape">
-    Projeto acadêmico desenvolvido para a disciplina de Processamento de Linguagem Natural<br>
+    Projeto acadêmico — Processamento de Linguagem Natural<br>
     FATEC Cotia — Curso de Ciência de Dados<br><br>
     📖 Incentivando a leitura através da tecnologia
   </div>
 </div>
-
 <script>
 let queryAtual = "";
 const feedbackState = new Map();
-
-function esc(str) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(String(str)));
-  return div.innerHTML;
-}
-
-function limpar() {
-  document.getElementById("input-texto").value = "";
-  document.getElementById("resultado").innerHTML = "";
-  document.getElementById("historico-section").innerHTML = "";
-  feedbackState.clear();
-}
-
-async function recomendar() {
-  const texto = document.getElementById("input-texto").value.trim();
-  if (!texto) { alert("⚠️ Escreva algo antes de continuar."); return; }
-
-  queryAtual = texto;
-  feedbackState.clear();
-
-  const btn = document.getElementById("btn-recomendar");
-  btn.disabled = true;
-
+function esc(s){ const d=document.createElement("div"); d.appendChild(document.createTextNode(String(s))); return d.innerHTML; }
+function limpar(){ document.getElementById("input-texto").value=""; document.getElementById("resultado").innerHTML=""; document.getElementById("historico-section").innerHTML=""; feedbackState.clear(); }
+async function recomendar(){
+  const texto=document.getElementById("input-texto").value.trim();
+  if(!texto){alert("⚠️ Escreva algo antes de continuar.");return;}
+  queryAtual=texto; feedbackState.clear();
+  const btn=document.getElementById("btn-recomendar"); btn.disabled=true;
   document.getElementById("spinner").classList.add("ativo");
-  document.getElementById("resultado").innerHTML = "";
-  document.getElementById("historico-section").innerHTML = "";
-
-  try {
-    const resp = await fetch("/recomendar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: texto })
-    });
-    const data = await resp.json();
-
-    if (data.erro) {
-      document.getElementById("resultado").innerHTML =
-        `<p style="color:#c0392b;margin-top:16px">${esc(data.erro)}</p>`;
-      return;
-    }
-
-    // FIX: tratamento de crise movido para DENTRO da função recomendar(),
-    // logo após receber a resposta — era um bloco solto fora de qualquer função.
-    if (data.crise) {
-      document.getElementById("resultado").innerHTML = `
-        <div class="crise-box">
-          <b style="color:#e65100">💛 Um momento...</b><br><br>
-          ${esc(data.mensagem)}
-        </div>`;
-      return;
-    }
-
-    renderResultado(data);
-    carregarHistorico();
-
-  } catch(e) {
-    document.getElementById("resultado").innerHTML =
-      `<p style="color:#c0392b;margin-top:16px">Erro de conexão: ${esc(String(e))}</p>`;
-  } finally {
-    document.getElementById("spinner").classList.remove("ativo");
-    btn.disabled = false;
-  }
+  document.getElementById("resultado").innerHTML="";
+  document.getElementById("historico-section").innerHTML="";
+  try{
+    const resp=await fetch("/recomendar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:texto})});
+    const data=await resp.json();
+    if(data.erro){document.getElementById("resultado").innerHTML=`<p style="color:#c0392b;margin-top:16px">${esc(data.erro)}</p>`;return;}
+    if(data.crise){document.getElementById("resultado").innerHTML=`<div class="crise-box"><b style="color:#e65100">💛 Um momento...</b><br><br>${esc(data.mensagem)}</div>`;return;}
+    renderResultado(data); carregarHistorico();
+  }catch(e){document.getElementById("resultado").innerHTML=`<p style="color:#c0392b;margin-top:16px">Erro de conexão: ${esc(String(e))}</p>`;}
+  finally{document.getElementById("spinner").classList.remove("ativo");btn.disabled=false;}
 }
-
-function renderResultado(data) {
-  const livros    = data.livros;
-  const emocao    = data.emocao    || "";
-  const analiseIA = data.analise_ia || "";
-  const top       = livros[0];
-
-  let html = `<hr>`;
-  if (emocao) html += `<div class="emocao-chip">🧠 Emoção: ${esc(emocao)}</div>`;
-  html += `<h3 style="font-family:'Playfair Display',serif;color:#5a4634;margin-bottom:14px;font-size:19px;">★ Livro #1 — Melhor recomendação para você</h3>`;
-
-  const matchPct = top._score_sem ? (top._score_sem * 100).toFixed(1) : "—";
-  html += `<div class="livro-card">
-    <div class="livro-titulo">📚 ${esc(top["Título do Livro"] || "")}</div>
-    <span class="badge match-badge">Match ${matchPct}%</span>
-    <span class="badge">${esc(top["Gênero"] || "")}</span>
-    <span class="badge">${esc(top["Sentimento I"] || "")}</span>
-    <span class="badge">${esc(top["Público-Alvo"] || "")}</span>
-    <br><br>
-    <b>💡 Sinopse:</b><br>${esc(top["Sinopse"] || "Sem descrição")}<br><br>
-    <b>🎭 Emoções:</b> ${esc(top["Emoção I"] || "")}${top["Emoção II"] ? ", " + esc(top["Emoção II"]) : ""}
-    &nbsp;|&nbsp;<b>📄 Páginas:</b> ${esc(String(top["Páginas"] || "—"))}
+function renderResultado(data){
+  const livros=data.livros, emocao=data.emocao||"", analiseIA=data.analise_ia||"", iaHabilitada=data.ia_habilitada??true, top=livros[0];
+  let html=`<hr>`;
+  if(emocao) html+=`<div class="emocao-chip">🧠 Emoção: ${esc(emocao)}</div>`;
+  html+=`<h3 style="font-family:'Playfair Display',serif;color:#5a4634;margin-bottom:14px;font-size:19px;">★ Livro #1 — Melhor recomendação para você</h3>`;
+  const pct=top._score_sem?(top._score_sem*100).toFixed(1):"—";
+  html+=`<div class="livro-card">
+    <div class="livro-titulo">📚 ${esc(top["Título do Livro"]||"")}</div>
+    <span class="badge match-badge">Match ${pct}%</span>
+    <span class="badge">${esc(top["Gênero"]||"")}</span>
+    <span class="badge">${esc(top["Sentimento I"]||"")}</span>
+    <span class="badge">${esc(top["Público-Alvo"]||"")}</span>
+    <br><br><b>💡 Sinopse:</b><br>${esc(top["Sinopse"]||"Sem descrição")}<br><br>
+    <b>🎭 Emoções:</b> ${esc(top["Emoção I"]||"")}${top["Emoção II"]?", "+esc(top["Emoção II"]):""}
+    &nbsp;|&nbsp;<b>📄 Páginas:</b> ${esc(String(top["Páginas"]||"—"))}
   </div>`;
-
-  if (analiseIA) {
-    html += `<div class="bloco-ia">💛 <b>Por que este livro é o ideal para você?</b><br><br>${esc(analiseIA)}</div>`;
+  if(analiseIA&&analiseIA.trim()){
+    html+=`<div class="bloco-ia"><div class="ia-header">💛 Por que este livro é ideal para você?<span class="ia-modelo">Gemini 1.5 Flash · Google</span></div>${esc(analiseIA)}</div>`;
+  } else if(!iaHabilitada){
+    html+=`<div class="bloco-ia"><div class="ia-header">💡 Análise de IA</div><span style="font-style:normal;color:#9a8070;font-size:13px;">Configure a variável <code>GEMINI_API_KEY</code> para habilitar análises personalizadas com IA.<br>Obtenha sua chave gratuita em: aistudio.google.com/apikey</span></div>`;
   }
-
-  html += `<div class="feedback-row">
-    <button class="btn-fb" id="fb-ok-0"  onclick="feedback(0,true)">👍 Foi útil</button>
+  html+=`<div class="feedback-row">
+    <button class="btn-fb" id="fb-ok-0" onclick="feedback(0,true)">👍 Foi útil</button>
     <button class="btn-fb" id="fb-nok-0" onclick="feedback(0,false)">👎 Não foi útil</button>
     <span class="fb-confirmacao" id="fb-msg-0"></span>
   </div>`;
-
-  if (livros.length > 1) {
-    html += `<details><summary>📋 Ver todos os ${livros.length} livros recomendados</summary>
-    <div class="outros-livros">`;
-
-    livros.forEach((l, i) => {
-      const pct  = l._score_sem ? (l._score_sem * 100).toFixed(1) : "—";
-      const expl = l["explicacao"] || "";
-      html += `<div class="outro-item">
-        <div style="flex:1">
-          <div class="outro-titulo">${i === 0 ? "★ " : (i+1) + ". "}${esc(l["Título do Livro"] || "")}</div>
-          <div class="outro-meta">${esc(l["Gênero"] || "")} &nbsp;|&nbsp; ${esc(l["Sentimento I"] || "")} &nbsp;|&nbsp; Match ${pct}%</div>
-          ${expl ? `<div class="outro-expl">${esc(expl)}</div>` : ""}
-        </div>
-        <div class="outro-fb">
-          <button id="outro-ok-${i}"  onclick="feedback(${i},true)"  title="Útil">👍</button>
-          <button id="outro-nok-${i}" onclick="feedback(${i},false)" title="Não útil">👎</button>
-        </div>
-      </div>`;
+  if(livros.length>1){
+    html+=`<details><summary>📋 Ver todos os ${livros.length} livros recomendados</summary><div class="outros-livros" style="margin-top:12px">`;
+    livros.forEach((l,i)=>{
+      const p=l._score_sem?(l._score_sem*100).toFixed(1):"—", ex=l["explicacao"]||"";
+      html+=`<div class="outro-item"><div style="flex:1">
+        <div class="outro-titulo">${i===0?"★ ":(i+1)+". "}${esc(l["Título do Livro"]||"")}</div>
+        <div class="outro-meta">${esc(l["Gênero"]||"")} | ${esc(l["Sentimento I"]||"")} | Match ${p}%</div>
+        ${ex?`<div class="outro-expl">${esc(ex)}</div>`:""}
+      </div><div class="outro-fb">
+        <button id="outro-ok-${i}" onclick="feedback(${i},true)">👍</button>
+        <button id="outro-nok-${i}" onclick="feedback(${i},false)">👎</button>
+      </div></div>`;
     });
-
-    html += `</div></details>`;
+    html+=`</div></details>`;
   }
-
-  html += `<div class="citacao">"Um leitor vive mil vidas antes de morrer…"<br>— George R.R. Martin</div>`;
-
-  document.getElementById("resultado").innerHTML = html;
-  window._livros = livros;
+  html+=`<div class="citacao">"Um leitor vive mil vidas antes de morrer…"<br>— George R.R. Martin</div>`;
+  document.getElementById("resultado").innerHTML=html;
+  window._livros=livros;
 }
-
-async function feedback(idx, util) {
-  const livro = (window._livros || [])[idx];
-  if (!livro) return;
-
-  const titulo = livro["Título do Livro"];
-
-  // Evita duplo envio
-  if (feedbackState.get(String(idx)) === util) return;
-  feedbackState.set(String(idx), util);
-
-  const resp = await fetch("/feedback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ titulo, util, query: queryAtual })
+async function feedback(idx,util){
+  const livro=(window._livros||[])[idx]; if(!livro) return;
+  const titulo=livro["Título do Livro"];
+  if(feedbackState.get(String(idx))===util) return;
+  feedbackState.set(String(idx),util);
+  const resp=await fetch("/feedback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({titulo,util,query:queryAtual})});
+  const data=await resp.json();
+  if(data.erro){console.warn("Feedback rejeitado:",data.erro);return;}
+  [["fb-ok-","fb-nok-","fb-msg-"],["outro-ok-","outro-nok-",null]].forEach(([ok,nok,msg])=>{
+    const bOk=document.getElementById(ok+idx), bNok=document.getElementById(nok+idx);
+    if(bOk){bOk.classList.toggle("ativo-ok",util);bOk.classList.remove("ativo-nok");}
+    if(bNok){bNok.classList.toggle("ativo-nok",!util);bNok.classList.remove("ativo-ok");}
+    if(msg){const m=document.getElementById(msg+idx);if(m)m.textContent=util?"Obrigado! 😊":"Anotado.";}
   });
-  const data = await resp.json();
-  if (data.erro) { console.warn("Feedback rejeitado:", data.erro); return; }
-
-  // Atualiza visual em todos os botões (livro #1 e lista expandida)
-  const prefixos = [
-    ["fb-ok-", "fb-nok-", "fb-msg-"],
-    ["outro-ok-", "outro-nok-", null],
-  ];
-
-  prefixos.forEach(([idOk, idNok, idMsg]) => {
-    const btnOk  = document.getElementById(idOk  + idx);
-    const btnNok = document.getElementById(idNok + idx);
-    if (btnOk)  { btnOk.classList.toggle("ativo-ok",  util); btnOk.classList.remove("ativo-nok"); }
-    if (btnNok) { btnNok.classList.toggle("ativo-nok", !util); btnNok.classList.remove("ativo-ok"); }
-    if (idMsg) {
-      const msg = document.getElementById(idMsg + idx);
-      if (msg) msg.textContent = util ? "Obrigado! 😊" : "Anotado.";
-    }
-  });
-
   carregarHistorico();
 }
-
-async function carregarHistorico() {
-  const resp = await fetch("/historico");
-  const data = await resp.json();
-  if (!data.historico || data.historico.length === 0) return;
-
-  let html = `<hr><div class="historico-titulo">📜 Histórico de avaliações</div>`;
-  data.historico.forEach(item => {
-    const cls   = item.score > 0 ? "hist-ok" : (item.score < 0 ? "hist-nok" : "");
-    const emoji = item.score > 0 ? "👍" : (item.score < 0 ? "👎" : "➖");
-    const sinal = item.score > 0 ? "+" : "";
-    html += `<div class="hist-item ${cls}">• ${esc(item.titulo)}<span class="score">${emoji} ${sinal}${item.score}</span></div>`;
+async function carregarHistorico(){
+  const resp=await fetch("/historico"); const data=await resp.json();
+  if(!data.historico||data.historico.length===0) return;
+  let html=`<hr><div class="historico-titulo">📜 Histórico de avaliações</div>`;
+  data.historico.forEach(item=>{
+    const cls=item.score>0?"hist-ok":(item.score<0?"hist-nok":""), emoji=item.score>0?"👍":(item.score<0?"👎":"➖"), sinal=item.score>0?"+":"";
+    html+=`<div class="hist-item ${cls}">• ${esc(item.titulo)}<span class="score">${emoji} ${sinal}${item.score}</span></div>`;
   });
-  document.getElementById("historico-section").innerHTML = html;
+  document.getElementById("historico-section").innerHTML=html;
 }
 </script>
 </body>
 </html>"""
 
 # ============================================================
-# 11. ROTAS FLASK
+# 11. ROTAS
 # ============================================================
 @app.route("/")
 def index():
     return HTML
-@app.route("/recomendar", methods=["POST"])
 
+@app.route("/recomendar", methods=["POST"])
 def rota_recomendar():
     ip = request.remote_addr or "local"
     if not rate_recomendar(ip):
-        return jsonify({"erro": "Muitas requisições. Aguarde um momento."}), 429
-
+        return jsonify({"erro": "Muitas requisições. Aguarde."}), 429
     body  = request.get_json(force=True)
     query = body.get("query", "").strip()
     if not query:
         return jsonify({"erro": "Query vazia."})
-
     if detectar_crise(query):
-        print(f"⚠️  CRISE DETECTADA na query: '{query[:50]}...'")
         return jsonify({"crise": True, "mensagem": CRISIS_RESPOSTA})
-
     emocoes         = detectar_emocoes(query)
     tipo_sentimento = classificar_ambiguidade(query, emocoes)
     label_emocao    = formatar_label_emocoes(emocoes, tipo_sentimento)
-
-    print(f"\nQuery: '{query}'")
-    print(f"Emoções: {emocoes} | Tipo: {tipo_sentimento}")
-
     penalizados = livros_penalizados()
     resultados  = recomendar_livros(query, emocoes, tipo_sentimento, top_k=10)
-
     if not resultados.empty and penalizados:
-        resultados = resultados[
-            ~resultados["Título do Livro"].isin(penalizados)
-        ].reset_index(drop=True)
-
+        resultados = resultados[~resultados["Título do Livro"].isin(penalizados)].reset_index(drop=True)
     if resultados.empty:
         return jsonify({"erro": "Nenhum livro encontrado."})
-
-    def _sanitizar(v):
+    def _san(v):
         if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
             return None
         return v
-
-    livros = [
-        {k: _sanitizar(v) for k, v in row.items()}
-        for row in resultados.to_dict(orient="records")
-    ]
+    livros  = [{k: _san(v) for k, v in row.items()} for row in resultados.to_dict(orient="records")]
     analise = analisar_top_livro(query, livros[0], tipo_sentimento) if livros else ""
-
-    return jsonify({"livros": livros, "emocao": label_emocao, "analise_ia": analise})
+    return jsonify({"livros": livros, "emocao": label_emocao, "analise_ia": analise, "ia_habilitada": _API_KEY_VALIDA})
 
 @app.route("/feedback", methods=["POST"])
 def rota_feedback():
     ip = request.remote_addr or "local"
     if not rate_feedback(ip):
         return jsonify({"erro": "Muitos feedbacks. Aguarde."}), 429
-
     body   = request.get_json(force=True)
     titulo = body.get("titulo", "").strip()
     util   = bool(body.get("util"))
     query  = body.get("query", "")
-
     ok, msg = registrar_feedback(titulo, util, query)
     if not ok:
         return jsonify({"erro": msg}), 400
     return jsonify({"ok": True})
 
-
 @app.route("/historico")
 def rota_historico():
     return jsonify({"historico": ler_historico_feedback()})
 
-
-# ↓ ADICIONE AQUI ↓
 @app.route("/debug_emocao", methods=["POST"])
 def debug_emocao():
-    body    = request.get_json(force=True)
-    texto   = body.get("query", "")
-    limpo   = limpar_texto(texto)
-    emocoes = detectar_emocoes(texto)
-    return jsonify({"limpo": limpo, "emocoes": emocoes})
+    body  = request.get_json(force=True)
+    texto = body.get("query", "")
+    return jsonify({"limpo": limpar_texto(texto), "emocoes": detectar_emocoes(texto)})
+
+@app.route("/status")
+def status():
+    return jsonify({"status": "ok", "https": True, "ia_habilitada": _API_KEY_VALIDA, "livros": len(df)})
 
 # ============================================================
 # 12. INICIALIZAÇÃO
@@ -1103,14 +816,15 @@ print("Carregando dados do MongoDB...")
 df = carregar_dados()
 print(f"Dataset: {len(df)} livros")
 
-_titulos_validos: set = set(df["Título do Livro"].dropna().tolist())
+_titulos_validos = set(df["Título do Livro"].dropna().tolist())
 
 if _API_KEY_VALIDA:
-    print("✅ ANTHROPIC_API_KEY configurada — análise de IA habilitada.")
-elif _API_KEY:
-    print("⚠️  ANTHROPIC_API_KEY parece inválida (esperado 'sk-ant-...'). IA desabilitada.")
+    print("✅ GEMINI_API_KEY configurada — análise de IA habilitada.")
 else:
-    print("ℹ️  ANTHROPIC_API_KEY não definida — análise de IA desabilitada.")
+    print("ℹ️  GEMINI_API_KEY não definida.")
+    print("    No CMD Windows execute ANTES de rodar o script:")
+    print("    set GEMINI_API_KEY=AIzaSy...suachave")
+    print("    Chave gratuita em: aistudio.google.com/apikey")
 
 print("Carregando modelo e embeddings...")
 modelo, embeddings_livros = carregar_modelo_embeddings(df)
@@ -1120,7 +834,21 @@ pipeline_clf = treinar_classificador(df)
 
 pre_filtro_info = _calcular_pre_filtro(len(df))
 print(f"Pre-filtro dinâmico: {pre_filtro_info} candidatos para {len(df)} livros")
-print(f"\n✅ Tudo pronto! Acesse: http://localhost:5000\n")
+
+gerar_cert_autoassinado()
+
+print(f"\n✅ Tudo pronto!")
+print(f"   🔒 HTTPS → https://localhost:{HTTPS_PORT}")
+print(f"   🔀 HTTP  → http://localhost:{HTTP_PORT}  (redireciona para HTTPS)\n")
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5000)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(CERT_FILE, KEY_FILE)
+
+    def rodar_redirect():
+        redirect_app.run(host="0.0.0.0", port=HTTP_PORT, debug=False, use_reloader=False)
+
+    t = threading.Thread(target=rodar_redirect, daemon=True)
+    t.start()
+
+    app.run(host="0.0.0.0", port=HTTPS_PORT, debug=False, ssl_context=ctx)
