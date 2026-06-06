@@ -1797,4 +1797,1030 @@
   "url": "amazon.com/Wonky-Donkey-Craig-Smith/dp/0545261244/ref=zg_bs_g_books_sccl_100/142-7825522-0098658?psc=1",
   "Sinopse": "Uma canção cumulativa e hilariante sobre um burro muito peculiar, que se torna cada vez mais engraçado à medida que a história avança.",
   "Público-Alvo": "Infantil (Crianças de 3 a 7 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff6c"
+  },
+  "id": 101,
+  "Título do Livro": "The Alchemist",
+  "Autor": "Paulo Coelho",
+  "Gênero": "Ficção Filosófica",
+  "rating": null,
+  "Sentimento I": "Inspirador",
+  "Sentimento II": "Reflexivo",
+  "Emoção I": "Esperança",
+  "Emoção II": "Curiosidade",
+  "Páginas": 208,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Alchemist-Paulo-Coelho/dp/0062315005",
+  "Sinopse": "O Alquimista é um romance clássico em que um jovem pastor chamado Santiago parte em busca de um tesouro escondido nas pirâmides do Egito após ter um sonho recorrente sobre ele. No caminho, encontra mentores, se apaixona e aprende a importância de seguir a própria lenda pessoal.",
+  "Público-Alvo": "Adulto (Fãs de ficção filosófica e autoconhecimento)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff6d"
+  },
+  "id": 102,
+  "Título do Livro": "Atomic Habits",
+  "Autor": "James Clear",
+  "Gênero": "Autoajuda / Desenvolvimento Pessoal",
+  "rating": null,
+  "Sentimento I": "Motivador",
+  "Sentimento II": "Prático",
+  "Emoção I": "Motivação",
+  "Emoção II": "Determinação",
+  "Páginas": 320,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Atomic-Habits-Proven-Build-Break/dp/0735211299",
+  "Sinopse": "Hábitos Atômicos é o guia definitivo para abandonar comportamentos ruins e adotar bons hábitos em quatro passos, mostrando como pequenas rotinas diárias se transformam em mudanças positivas enormes ao longo do tempo.",
+  "Público-Alvo": "Adulto (Interessados em produtividade e hábitos)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff6e"
+  },
+  "id": 103,
+  "Título do Livro": "Thinking Fast And Slow",
+  "Autor": "Daniel Kahneman",
+  "Gênero": "Psicologia / Não-Ficção",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Desafiador",
+  "Emoção I": "Curiosidade",
+  "Emoção II": "Admiração",
+  "Páginas": 499,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/Thinking-Fast-Slow-Daniel-Kahneman/dp/0374533555",
+  "Sinopse": "Rápido e Devagar: Duas Formas de Pensar revela como dois sistemas do cérebro disputam constantemente o controle do nosso comportamento, levando a erros de memória, julgamento e decisão — e o que podemos fazer a respeito.",
+  "Público-Alvo": "Adulto (Interessados em psicologia e tomada de decisão)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff6f"
+  },
+  "id": 104,
+  "Título do Livro": "The Four Agreements",
+  "Autor": "Don Miguel Ruiz",
+  "Gênero": "Autoajuda / Espiritualidade",
+  "rating": null,
+  "Sentimento I": "Inspirador",
+  "Sentimento II": "Transformador",
+  "Emoção I": "Esperança",
+  "Emoção II": "Paz",
+  "Páginas": 160,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Four-Agreements-Practical-Personal-Freedom/dp/1878424319",
+  "Sinopse": "Os Quatro Acordos baseia-se na tradição milenar dos Toltecas para mostrar como fomos domesticados desde a infância, como essas regras internas nos prejudicam e o que podemos fazer para substituí-las por novos acordos com nós mesmos.",
+  "Público-Alvo": "Adulto (Interessados em espiritualidade e autoconhecimento)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff70"
+  },
+  "id": 105,
+  "Título do Livro": "The 7 Habits Of Highly Effective People",
+  "Autor": "Stephen R Covey",
+  "Gênero": "Autoajuda / Desenvolvimento Pessoal",
+  "rating": null,
+  "Sentimento I": "Motivador",
+  "Sentimento II": "Prático",
+  "Emoção I": "Motivação",
+  "Emoção II": "Entusiasmo",
+  "Páginas": 381,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Habits-Highly-Effective-People-Powerful/dp/1451639619",
+  "Sinopse": "Os 7 Hábitos das Pessoas Altamente Eficazes ensina eficácia pessoal e profissional ao mudar sua visão de mundo e apresentar 7 hábitos que, quando bem adotados, levam ao sucesso em todas as áreas da vida.",
+  "Público-Alvo": "Adulto (Profissionais e interessados em liderança)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff72"
+  },
+  "id": 107,
+  "Título do Livro": "The Subtle Art of Not Giving a Fck",
+  "Autor": "Mark Manson",
+  "Gênero": "Autoajuda / Filosofia",
+  "rating": null,
+  "Sentimento I": "Provocador",
+  "Sentimento II": "Autêntico",
+  "Emoção I": "Reflexão",
+  "Emoção II": "Alívio",
+  "Páginas": 224,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Subtle-Art-Not-Giving/dp/0062457713",
+  "Sinopse": "A Sutil Arte de Ligar o F*da-se abandona a mania da psicologia positiva para oferecer uma abordagem estoica e sem rodeios para viver uma vida que talvez não seja sempre feliz, mas sim significativa e centrada no que realmente importa.",
+  "Público-Alvo": "Adulto (Interessados em autoconhecimento e filosofia prática)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff75"
+  },
+  "id": 110,
+  "Título do Livro": "12 Rules For Life",
+  "Autor": "Jordan Peterson",
+  "Gênero": "Autoajuda / Filosofia",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Provocador",
+  "Emoção I": "Reflexão",
+  "Emoção II": "Curiosidade",
+  "Páginas": 448,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/12-Rules-Life-Antidote-Chaos/dp/0345816021",
+  "Sinopse": "12 Regras para a Vida é um manual de autoajuda baseado em histórias para jovens que apresenta princípios simples capazes de ajudá-los a ser mais disciplinados, agir com integridade e equilibrar suas vidas enquanto as aproveitam ao máximo.",
+  "Público-Alvo": "Adulto (Interessados em filosofia e ordem pessoal)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff76"
+  },
+  "id": 111,
+  "Título do Livro": "The 48 Laws Of Power",
+  "Autor": "Robert Greene",
+  "Gênero": "Autoajuda / Estratégia",
+  "rating": null,
+  "Sentimento I": "Provocador",
+  "Sentimento II": "Tenso",
+  "Emoção I": "Curiosidade",
+  "Emoção II": "Ambição",
+  "Páginas": 480,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/48-Laws-Power-Robert-Greene/dp/0140280197",
+  "Sinopse": "As 48 Leis do Poder utiliza disputas históricas famosas para mostrar como o poder se manifesta, como conquistá-lo, como se defender do poder alheio e, acima de tudo, como usá-lo e mantê-lo de forma eficaz.",
+  "Público-Alvo": "Adulto (Interessados em poder e estratégia)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff77"
+  },
+  "id": 112,
+  "Título do Livro": "The Courage To Be Disliked",
+  "Autor": "Ichiro Kishimi Fumitake Koga",
+  "Gênero": "Psicologia / Filosofia",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Transformador",
+  "Emoção I": "Esperança",
+  "Emoção II": "Curiosidade",
+  "Páginas": 288,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Courage-Be-Disliked-Phenomenon-Happiness/dp/1501197274",
+  "Sinopse": "A Coragem de Ser Feliz é uma análise japonesa da obra do psicólogo Alfred Adler, do século XIX, que defende que a felicidade está nas mãos de cada indivíduo e não depende de traumas do passado.",
+  "Público-Alvo": "Adulto (Interessados em psicologia adleriana)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff78"
+  },
+  "id": 113,
+  "Título do Livro": "Mans Search For Meaning",
+  "Autor": "Viktor Frankl",
+  "Gênero": "Psicologia / Memórias",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Profundo",
+  "Emoção I": "Compaixão",
+  "Emoção II": "Esperança",
+  "Páginas": 200,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Mans-Search-Meaning-Viktor-Frankl/dp/0807014273",
+  "Sinopse": "Em Busca de Sentido relata as experiências aterrorizantes do sobrevivente do Holocausto Viktor Frankl em campos de concentração nazistas, junto com sua abordagem psicológica da logoterapia, que o ajudou a sobreviver e mostra como encontrar sentido na própria vida.",
+  "Público-Alvo": "Adulto (Interessados em psicologia e significado de vida)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff7a"
+  },
+  "id": 115,
+  "Título do Livro": "Daring Greatly",
+  "Autor": "Brene Brown",
+  "Gênero": "Autoajuda / Psicologia",
+  "rating": null,
+  "Sentimento I": "Inspirador",
+  "Sentimento II": "Reflexivo",
+  "Emoção I": "Vulnerabilidade",
+  "Emoção II": "Coragem",
+  "Páginas": 320,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Daring-Greatly-Courage-Vulnerable-Transforms/dp/1592408419",
+  "Sinopse": "A Coragem de Ser Imperfeito é um livro sobre ter a coragem de se mostrar vulnerável num mundo em que todos querem parecer fortes, confiantes e que sabem exatamente o que estão fazendo.",
+  "Público-Alvo": "Adulto (Interessados em vulnerabilidade e liderança)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff7b"
+  },
+  "id": 116,
+  "Título do Livro": "Big Magic",
+  "Autor": "Elizabeth Gilbert",
+  "Gênero": "Autoajuda / Criatividade",
+  "rating": null,
+  "Sentimento I": "Inspirador",
+  "Sentimento II": "Leve",
+  "Emoção I": "Criatividade",
+  "Emoção II": "Entusiasmo",
+  "Páginas": 288,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Big-Magic-Creative-Living-Beyond/dp/1594634726",
+  "Sinopse": "Magia Criativa é o livro que lhe dará a coragem necessária para perseguir seus interesses criativos, mostrando como lidar com o medo, perceber ideias e agir sobre elas, e tirar o estresse do processo de criação.",
+  "Público-Alvo": "Adulto (Criativos e artistas)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff7c"
+  },
+  "id": 117,
+  "Título do Livro": "Quiet",
+  "Autor": "Susan Cain",
+  "Gênero": "Psicologia / Sociologia",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Revelador",
+  "Emoção I": "Empatia",
+  "Emoção II": "Curiosidade",
+  "Páginas": 352,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Quiet-Power-Introverts-World-Talking/dp/0307352153",
+  "Sinopse": "Quieto mostra a ascensão lenta do ideal extrovertido de sucesso ao longo do século XX, defendendo o poder subestimado dos introvertidos e apontando novas formas de colaboração entre os dois perfis.",
+  "Público-Alvo": "Adulto (Introvertidos e interessados em comportamento humano)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff83"
+  },
+  "id": 124,
+  "Título do Livro": "Rich Dad Poor Dad",
+  "Autor": "Robert T Kiyosaki",
+  "Gênero": "Finanças Pessoais",
+  "rating": null,
+  "Sentimento I": "Motivador",
+  "Sentimento II": "Revelador",
+  "Emoção I": "Ambição",
+  "Emoção II": "Curiosidade",
+  "Páginas": 336,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Rich-Dad-Poor-Middle-Anniversary/dp/1612680194",
+  "Sinopse": "Pai Rico, Pai Pobre conta a história de um menino com dois pais — um rico, outro pobre — para ajudá-lo a desenvolver a mentalidade e o conhecimento financeiro necessários para construir uma vida de riqueza e liberdade.",
+  "Público-Alvo": "Adulto (Interessados em educação financeira)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff89"
+  },
+  "id": 130,
+  "Título do Livro": "Meditations",
+  "Autor": "Marcus Aurelius",
+  "Gênero": "Filosofia / Estoicismo",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Profundo",
+  "Emoção I": "Serenidade",
+  "Emoção II": "Sabedoria",
+  "Páginas": 254,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Meditations-New-Translation-Marcus-Aurelius/dp/0812968255",
+  "Sinopse": "Meditações é uma coleção de 12 livros escritos pelo imperador romano Marco Aurélio, que apresenta a filosofia estoica, o conceito de lógica, autodisciplina e a crença de que o curso do mundo segue um caminho virtuoso.",
+  "Público-Alvo": "Adulto (Interessados em filosofia estoica)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff8a"
+  },
+  "id": 131,
+  "Título do Livro": "The Obstacle Is The Way",
+  "Autor": "Ryan Holiday",
+  "Gênero": "Autoajuda / Filosofia Estoica",
+  "rating": null,
+  "Sentimento I": "Motivador",
+  "Sentimento II": "Reflexivo",
+  "Emoção I": "Resiliência",
+  "Emoção II": "Determinação",
+  "Páginas": 224,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Obstacle-Way-Timeless-Turning-Triumph/dp/1591846358",
+  "Sinopse": "O Obstáculo é o Caminho é uma releitura moderna da filosofia estoica que ajuda a enfrentar as dificuldades da vida com graça e resiliência, extraindo lições de heróis da antiguidade, ex-presidentes, atletas e artistas que transformaram adversidades em sucesso.",
+  "Público-Alvo": "Adulto (Interessados em estoicismo e superação)"
+},
+{
+  "_id": {
+    "$oid": "6a136a6bd79bd306a817ff8b"
+  },
+  "id": 132,
+  "Título do Livro": "The Power Of Now",
+  "Autor": "Eckhart Tolle",
+  "Gênero": "Autoajuda / Espiritualidade",
+  "rating": null,
+  "Sentimento I": "Tranquilizador",
+  "Sentimento II": "Transformador",
+  "Emoção I": "Paz",
+  "Emoção II": "Serenidade",
+  "Páginas": 236,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Power-Now-Guide-Spiritual-Enlightenment/dp/1577314808",
+  "Sinopse": "O Poder do Agora mostra que cada minuto gasto se preocupando com o futuro ou lamentando o passado é um minuto perdido, pois o único momento que realmente existe é o presente — e oferece estratégias práticas para viver cada instante como ele se apresenta.",
+  "Público-Alvo": "Adulto (Interessados em espiritualidade e mindfulness)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff8f"
+  },
+  "id": 136,
+  "Título do Livro": "The Infernal City",
+  "Autor": "Greg Keyes",
+  "Gênero": "Fantasia / Ficção Científica",
+  "rating": null,
+  "Sentimento I": "Épico",
+  "Sentimento II": "Aventureiro",
+  "Emoção I": "Empolgação",
+  "Emoção II": "Curiosidade",
+  "Páginas": 304,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Infernal-City-Elder-Scrolls-Novel/dp/0345508023",
+  "Sinopse": "A Cidade Infernal é um romance ambientado no universo de Elder Scrolls, que acompanha um grupo de heróis em uma missão para parar uma cidade flutuante e amaldiçoada que espalha morte por onde passa.",
+  "Público-Alvo": "Adulto (Fãs de fantasia e do universo Elder Scrolls)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff90"
+  },
+  "id": 137,
+  "Título do Livro": "Sushi for Beginners",
+  "Autor": "Marian Keyes",
+  "Gênero": "Ficção / Comédia Romântica",
+  "rating": null,
+  "Sentimento I": "Leve",
+  "Sentimento II": "Divertido",
+  "Emoção I": "Alegria",
+  "Emoção II": "Entretenimento",
+  "Páginas": 608,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/Sushi-Beginners-Marian-Keyes/dp/0060524340",
+  "Sinopse": "Sushi para Iniciantes é uma comédia romântica que acompanha três mulheres com vidas completamente diferentes cujos destinos se entrelaçam ao redor de uma nova revista de moda em Dublin.",
+  "Público-Alvo": "Adulto (Fãs de ficção leve e comédia romântica)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff91"
+  },
+  "id": 138,
+  "Título do Livro": "The Mystery of Mercy Close",
+  "Autor": "Marian Keyes",
+  "Gênero": "Ficção / Mistério",
+  "rating": null,
+  "Sentimento I": "Tenso",
+  "Sentimento II": "Divertido",
+  "Emoção I": "Suspense",
+  "Emoção II": "Curiosidade",
+  "Páginas": 400,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Mystery-Mercy-Close-Helen-Walsh/dp/0143122460",
+  "Sinopse": "O Mistério de Mercy Close acompanha a detetive particular Helen Walsh enquanto investiga o desaparecimento de um membro de uma antiga boyband, lidando com seus próprios demônios ao mesmo tempo.",
+  "Público-Alvo": "Adulto (Fãs de mistério e ficção contemporânea)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff94"
+  },
+  "id": 141,
+  "Título do Livro": "You Can Heal Your Life",
+  "Autor": "Louise Hay",
+  "Gênero": "Autoajuda / Espiritualidade",
+  "rating": null,
+  "Sentimento I": "Transformador",
+  "Sentimento II": "Acolhedor",
+  "Emoção I": "Esperança",
+  "Emoção II": "Amor-Próprio",
+  "Páginas": 226,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/You-Can-Heal-Your-Life/dp/0937611018",
+  "Sinopse": "Você Pode Curar Sua Vida apresenta a ideia de que nossos pensamentos e crenças criaram nossas experiências, incluindo doenças, e mostra como mudar padrões mentais para transformar a saúde física e emocional.",
+  "Público-Alvo": "Adulto (Interessados em autoajuda, espiritualidade e cura interior)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff96"
+  },
+  "id": 143,
+  "Título do Livro": "Stranger in a Strange Land",
+  "Autor": "Robert A. Heinlein",
+  "Gênero": "Ficção Científica",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Provocador",
+  "Emoção I": "Curiosidade",
+  "Emoção II": "Admiração",
+  "Páginas": 448,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/Stranger-Strange-Land-Robert-Heinlein/dp/0441790348",
+  "Sinopse": "Estranho em Terra Estranha conta a história de Valentine Michael Smith, um humano criado em Marte que retorna à Terra e questiona cada aspecto da sociedade humana, tornando-se uma das obras mais influentes da ficção científica.",
+  "Público-Alvo": "Adulto (Fãs de ficção científica e filosofia)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff97"
+  },
+  "id": 144,
+  "Título do Livro": "The Minds of Billy Milligan",
+  "Autor": "Daniel Keyes",
+  "Gênero": "Psicologia / Não-Ficção",
+  "rating": null,
+  "Sentimento I": "Perturbador",
+  "Sentimento II": "Fascinante",
+  "Emoção I": "Choque",
+  "Emoção II": "Empatia",
+  "Páginas": 426,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/Minds-Billy-Milligan-Daniel-Keyes/dp/0394519922",
+  "Sinopse": "As Mentes de Billy Milligan narra o caso real de Billy Milligan, o primeiro réu absolvido por crime nos EUA por conta de transtorno dissociativo de identidade — com 24 personalidades distintas vivendo em uma só pessoa.",
+  "Público-Alvo": "Adulto (Interessados em psicologia, casos criminais reais e mente humana)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff98"
+  },
+  "id": 145,
+  "Título do Livro": "Happiness Key",
+  "Autor": "Emilie Richards",
+  "Gênero": "Ficção / Drama",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Aconchegante",
+  "Emoção I": "Esperança",
+  "Emoção II": "Conexão",
+  "Páginas": 400,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Happiness-Key-Emilie-Richards/dp/0778326098",
+  "Sinopse": "Happiness Key acompanha cinco mulheres muito diferentes que se tornam vizinhas em uma comunidade à beira-mar na Flórida, descobrindo que os laços inesperados que formam podem ser a chave para a felicidade que cada uma busca.",
+  "Público-Alvo": "Adulto (Fãs de ficção contemporânea feminina)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff99"
+  },
+  "id": 146,
+  "Título do Livro": "The Woman Who Stole My Life",
+  "Autor": "Marian Keyes",
+  "Gênero": "Ficção / Comédia",
+  "rating": null,
+  "Sentimento I": "Divertido",
+  "Sentimento II": "Reflexivo",
+  "Emoção I": "Entretenimento",
+  "Emoção II": "Surpresa",
+  "Páginas": 560,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/Woman-Who-Stole-My-Life/dp/0451474597",
+  "Sinopse": "A Mulher que Roubou Minha Vida é uma comédia sobre Stella Sweeney, que depois de uma síndrome rara que a deixou paralisada, se vê involuntariamente transformada em uma autora de autoajuda famosa nos EUA.",
+  "Público-Alvo": "Adulto (Fãs de ficção leve e comédia contemporânea)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff9a"
+  },
+  "id": 147,
+  "Título do Livro": "Halo: The Cole Protocol",
+  "Autor": "Tobias S. Buckell",
+  "Gênero": "Ficção Científica / Aventura",
+  "rating": null,
+  "Sentimento I": "Épico",
+  "Sentimento II": "Tenso",
+  "Emoção I": "Empolgação",
+  "Emoção II": "Adrenalina",
+  "Páginas": 352,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Halo-Cole-Protocol-Tobias-Buckell/dp/0765317850",
+  "Sinopse": "Halo: O Protocolo Cole é um romance da franquia Halo que expande o universo da saga, seguindo o Tenente Jacob Keyes em uma missão secreta nos primeiros dias da guerra entre a humanidade e o Covenant.",
+  "Público-Alvo": "Adulto e Jovem Adulto (Fãs da franquia Halo e ficção científica militar)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff9b"
+  },
+  "id": 148,
+  "Título do Livro": "Devonshire Scream",
+  "Autor": "Laura Childs",
+  "Gênero": "Mistério / Cozy Mystery",
+  "rating": null,
+  "Sentimento I": "Aconchegante",
+  "Sentimento II": "Curioso",
+  "Emoção I": "Suspense",
+  "Emoção II": "Entretenimento",
+  "Páginas": 320,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Devonshire-Scream-Tea-Shop-Mystery/dp/0425271277",
+  "Sinopse": "Devonshire Scream é um mistério charmoso da série Tea Shop, em que Theodosia Browning investiga um roubo e assassinato ocorridos durante um evento cultural em Charleston, entre chá, bolos e pistas intrigantes.",
+  "Público-Alvo": "Adulto (Fãs de cozy mystery e mistérios leves)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff9d"
+  },
+  "id": 150,
+  "Título do Livro": "The Collector",
+  "Autor": "John Fowles",
+  "Gênero": "Ficção / Suspense Psicológico",
+  "rating": null,
+  "Sentimento I": "Perturbador",
+  "Sentimento II": "Tenso",
+  "Emoção I": "Angústia",
+  "Emoção II": "Fascínio",
+  "Páginas": 347,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Collector-John-Fowles/dp/0316290879",
+  "Sinopse": "O Colecionador é um clássico do suspense psicológico sobre Frederick Clegg, um homem solitário que sequestra a jovem Miranda e a mantém em cativeiro, narrado alternadamente pelos dois personagens em perspectivas chocantemente opostas.",
+  "Público-Alvo": "Adulto (Fãs de suspense psicológico e ficção literária)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff9e"
+  },
+  "id": 151,
+  "Título do Livro": "Kahlil Gibran: His Life and World",
+  "Autor": "Robert Waterfield",
+  "Gênero": "Biografia",
+  "rating": null,
+  "Sentimento I": "Reflexivo",
+  "Sentimento II": "Inspirador",
+  "Emoção I": "Admiração",
+  "Emoção II": "Contemplação",
+  "Páginas": 456,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com/Kahlil-Gibran-His-Life-World/dp/0821216767",
+  "Sinopse": "Esta biografia explora a vida e o legado do poeta libanês Kahlil Gibran, autor de O Profeta, revelando sua trajetória entre o Oriente e o Ocidente e a profundidade espiritual que moldou sua obra atemporal.",
+  "Público-Alvo": "Adulto (Apreciadores de literatura, filosofia e biografia)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ff9f"
+  },
+  "id": 152,
+  "Título do Livro": "Capitol Threat",
+  "Autor": "William Bernhardt",
+  "Gênero": "Suspense Jurídico / Ficção",
+  "rating": null,
+  "Sentimento I": "Tenso",
+  "Sentimento II": "Intrigante",
+  "Emoção I": "Suspense",
+  "Emoção II": "Curiosidade",
+  "Páginas": 400,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com/Capitol-Threat-William-Bernhardt/dp/034547533X",
+  "Sinopse": "Capitol Threat é um thriller jurídico em que o advogado Ben Kincaid se vê no centro de um caso explosivo envolvendo uma nomeação para a Suprema Corte dos EUA, segredos políticos e um assassinato.",
+  "Público-Alvo": "Adulto (Fãs de suspense jurídico e thrillers políticos)"
+},
+{
+  "_id": {
+    "$oid": "6a137a3fd79bd306a817ffa0"
+  },
+  "id": 153,
+  "Título do Livro": "Stand By Me",
+  "Autor": "Stephen King",
+  "Gênero": "Ficção / Drama",
+  "rating": null,
+  "Sentimento I": "Nostálgico",
+  "Sentimento II": "Emotivo",
+  "Emoção I": "Saudade",
+  "Emoção II": "Amizade",
+  "Páginas": 160,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com/Different-Seasons-Stephen-King/dp/0451167538",
+  "Sinopse": "Stand By Me — baseado na novela 'O Corpo' de Stephen King — acompanha quatro amigos em uma jornada para encontrar o corpo de um garoto desaparecido, numa aventura que marca o fim de sua infância para sempre.",
+  "Público-Alvo": "Adulto e Jovem Adulto (Fãs de Stephen King e dramas de amadurecimento)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f77"
+  },
+  "id": 155,
+  "Título do Livro": "Percy Jackson e o Ladrão de Raios",
+  "Autor": "Rick Riordan",
+  "Gênero": "Fantasia, Juvenil",
+  "rating": null,
+  "Sentimento I": "Aventureiro",
+  "Sentimento II": "Épico",
+  "Emoção I": "Empolgação",
+  "Emoção II": "Fascínio",
+  "Páginas": 377,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Percy-Jackson-Ladr%C3%A3o-Raios/dp/8598078336",
+  "Sinopse": "Percy Jackson descobre que é filho de um deus grego e que o raio mestre de Zeus foi roubado. Acompanhado de amigos, embarca em uma aventura épica pelos EUA para recuperar o raio antes que uma guerra entre os deuses destrua o mundo.",
+  "Público-Alvo": "Juvenil e Jovem Adulto (Fãs de mitologia e aventura, a partir de 10 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f78"
+  },
+  "id": 156,
+  "Título do Livro": "Harry Potter e a Pedra Filosofal",
+  "Autor": "J.K. Rowling",
+  "Gênero": "Fantasia, Juvenil",
+  "rating": null,
+  "Sentimento I": "Encantador",
+  "Sentimento II": "Mágico",
+  "Emoção I": "Admiração",
+  "Emoção II": "Curiosidade",
+  "Páginas": 264,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Harry-Potter-Pedra-Filosofal/dp/8532530788",
+  "Sinopse": "Harry Potter descobre aos 11 anos que é um bruxo e vai estudar em Hogwarts, a escola de magia. Lá, faz amizades, aprende feitiços e descobre a verdade sobre o desaparecimento de seus pais.",
+  "Público-Alvo": "Infantil e Juvenil (Crianças e adolescentes a partir de 9 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f79"
+  },
+  "id": 157,
+  "Título do Livro": "O Pequeno Príncipe",
+  "Autor": "Antoine de Saint-Exupéry",
+  "Gênero": "Infantil, Fábula",
+  "rating": null,
+  "Sentimento I": "Poético",
+  "Sentimento II": "Reflexivo",
+  "Emoção I": "Melancolia",
+  "Emoção II": "Ternura",
+  "Páginas": 96,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com.br/Pequeno-Pr%C3%ADncipe/dp/8594536038",
+  "Sinopse": "Um aviador perdido no Saara encontra um menino de outro planeta. Através das histórias do pequeno príncipe, o livro revela verdades sobre amizade, amor e o que realmente importa na vida.",
+  "Público-Alvo": "Infantil e todas as idades (Clássico atemporal recomendado a partir de 8 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f7a"
+  },
+  "id": 158,
+  "Título do Livro": "Diário de um Banana",
+  "Autor": "Jeff Kinney",
+  "Gênero": "Humor, Juvenil",
+  "rating": null,
+  "Sentimento I": "Humorístico",
+  "Sentimento II": "Irreverente",
+  "Emoção I": "Diversão",
+  "Emoção II": "Identificação",
+  "Páginas": 218,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com.br/Di%C3%A1rio-Banana/dp/8576836327",
+  "Sinopse": "Greg Heffley narra em palavras e desenhos as peripécias do cotidiano no ensino médio, onde só quer ser popular mas se mete em situações cada vez mais embaraçosas.",
+  "Público-Alvo": "Juvenil (Crianças e pré-adolescentes de 8 a 13 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f7b"
+  },
+  "id": 159,
+  "Título do Livro": "O Mundo de Sofia",
+  "Autor": "Jostein Gaarder",
+  "Gênero": "Ficção, Juvenil",
+  "rating": null,
+  "Sentimento I": "Curioso",
+  "Sentimento II": "Intelectual",
+  "Emoção I": "Admiração",
+  "Emoção II": "Descoberta",
+  "Páginas": 499,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/mundo-Sofia/dp/8535903208",
+  "Sinopse": "Sofia Amundsen recebe cartas de um filósofo misterioso que a conduz por toda a história da filosofia ocidental, levando-a a questionar a própria realidade.",
+  "Público-Alvo": "Jovem Adulto (Adolescentes e adultos, a partir de 14 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f7c"
+  },
+  "id": 160,
+  "Título do Livro": "A Fantástica Fábrica de Chocolate",
+  "Autor": "Roald Dahl",
+  "Gênero": "Infantil, Fantasia",
+  "rating": null,
+  "Sentimento I": "Mágico",
+  "Sentimento II": "Extravagante",
+  "Emoção I": "Admiração",
+  "Emoção II": "Alegria",
+  "Páginas": 176,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com.br/Fant%C3%A1stica-F%C3%A1brica-Chocolate/dp/8573061243",
+  "Sinopse": "Charlie Bucket encontra um bilhete dourado e ganha uma visita à misteriosa fábrica de chocolates de Willy Wonka, junto com outros quatro sortudos.",
+  "Público-Alvo": "Infantil e Juvenil (Crianças de 7 a 12 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f7d"
+  },
+  "id": 161,
+  "Título do Livro": "O Hobbit",
+  "Autor": "J.R.R. Tolkien",
+  "Gênero": "Fantasia, Aventura, Juvenil",
+  "rating": null,
+  "Sentimento I": "Aventureiro",
+  "Sentimento II": "Épico",
+  "Emoção I": "Fascínio",
+  "Emoção II": "Empolgação",
+  "Páginas": 310,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Hobbit-Tolkien/dp/8595084742",
+  "Sinopse": "Bilbo Bolseiro, um hobbit caseiro, é convencido pelo mago Gandalf a embarcar numa jornada com treze anões para recuperar um tesouro guardado pelo dragão Smaug.",
+  "Público-Alvo": "Juvenil e Adulto (Leitores a partir de 12 anos, fãs de fantasia épica)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f7e"
+  },
+  "id": 162,
+  "Título do Livro": "Extraordinário",
+  "Autor": "R.J. Palacio",
+  "Gênero": "Ficção, Juvenil",
+  "rating": null,
+  "Sentimento I": "Emocionante",
+  "Sentimento II": "Inspirador",
+  "Emoção I": "Empatia",
+  "Emoção II": "Coragem",
+  "Páginas": 310,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Extraordin%C3%A1rio/dp/8580578523",
+  "Sinopse": "August Pullman nasceu com deformidade facial. Aos 10 anos vai pela primeira vez para uma escola normal e enfrenta os desafios de se encaixar e mostrar que merece ser visto além da aparência.",
+  "Público-Alvo": "Juvenil (Crianças e adolescentes de 8 a 14 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f7f"
+  },
+  "id": 163,
+  "Título do Livro": "A Culpa é das Estrelas",
+  "Autor": "John Green",
+  "Gênero": "Ficção, Romance, Jovem Adulto",
+  "rating": null,
+  "Sentimento I": "Comovente",
+  "Sentimento II": "Melancólico",
+  "Emoção I": "Amor",
+  "Emoção II": "Tristeza",
+  "Páginas": 313,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Culpa-%C3%A9-Das-Estrelas/dp/855730261X",
+  "Sinopse": "Hazel Grace, uma adolescente com câncer terminal, conhece Augustus Waters num grupo de apoio e os dois se apaixonam. Uma história de amor e coragem diante da impermanência da vida.",
+  "Público-Alvo": "Jovem Adulto (Adolescentes a partir de 13 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f80"
+  },
+  "id": 164,
+  "Título do Livro": "Capitães da Areia",
+  "Autor": "Jorge Amado",
+  "Gênero": "Ficção, Juvenil",
+  "rating": null,
+  "Sentimento I": "Crítico",
+  "Sentimento II": "Solidário",
+  "Emoção I": "Indignação",
+  "Emoção II": "Esperança",
+  "Páginas": 281,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Capit%C3%A3es-Areia/dp/8535906444",
+  "Sinopse": "Na Salvador dos anos 30, um grupo de meninos de rua liderados por Pedro Bala sobrevive através de pequenos furtos e solidariedade mútua.",
+  "Público-Alvo": "Jovem Adulto e Adulto (A partir de 14 anos; clássico da literatura brasileira)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f81"
+  },
+  "id": 165,
+  "Título do Livro": "Vira-Lata",
+  "Autor": "Thalita Rebouças",
+  "Gênero": "Ficção, Juvenil, Romance",
+  "rating": null,
+  "Sentimento I": "Leve",
+  "Sentimento II": "Divertido",
+  "Emoção I": "Identificação",
+  "Emoção II": "Alegria",
+  "Páginas": 224,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com.br/Vira-Lata/dp/8501088706",
+  "Sinopse": "Júlia é uma adolescente que ama cachorros e se apaixona pelo menino errado enquanto tenta encontrar seu lugar na escola.",
+  "Público-Alvo": "Juvenil (Adolescentes de 12 a 16 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f82"
+  },
+  "id": 166,
+  "Título do Livro": "Querida Evan Hansen",
+  "Autor": "Val Emmich",
+  "Gênero": "Ficção, Jovem Adulto",
+  "rating": null,
+  "Sentimento I": "Emotivo",
+  "Sentimento II": "Angustiante",
+  "Emoção I": "Empatia",
+  "Emoção II": "Culpa",
+  "Páginas": 352,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Querida-Evan-Hansen/dp/8566659740",
+  "Sinopse": "Evan Hansen, um adolescente com ansiedade social, se vê envolvido numa mentira que cresce após o suicídio de um colega, enquanto busca seu lugar no mundo.",
+  "Público-Alvo": "Jovem Adulto (Adolescentes interessados em saúde mental e identidade)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f83"
+  },
+  "id": 167,
+  "Título do Livro": "Maze Runner: Correr ou Morrer",
+  "Autor": "James Dashner",
+  "Gênero": "Ficção Científica, Jovem Adulto",
+  "rating": null,
+  "Sentimento I": "Tenso",
+  "Sentimento II": "Misterioso",
+  "Emoção I": "Adrenalina",
+  "Emoção II": "Suspense",
+  "Páginas": 374,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Maze-Runner-Correr-ou-Morrer/dp/8576574071",
+  "Sinopse": "Thomas acorda num elevador sem memórias, cercado por adolescentes num prado gigante chamado Labirinto. Para sobreviver, ele precisará resolver o mistério do Labirinto e descobrir o que a organização que os criou realmente quer.",
+  "Público-Alvo": "Jovem Adulto (Adolescentes fãs de distopia e aventura, a partir de 13 anos)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f84"
+  },
+  "id": 168,
+  "Título do Livro": "O Nome do Vento",
+  "Autor": "Patrick Rothfuss",
+  "Gênero": "Fantasia",
+  "rating": null,
+  "Sentimento I": "Épico",
+  "Sentimento II": "Lírico",
+  "Emoção I": "Fascínio",
+  "Emoção II": "Admiração",
+  "Páginas": 662,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/Nome-Vento/dp/8576573210",
+  "Sinopse": "Kvothe, o lendário mago, narra sua própria história: de órfão de rua a estudante do Arquivo, passando por amores, magia e batalhas que moldaram sua lenda.",
+  "Público-Alvo": "Adulto e Jovem Adulto (Fãs de fantasia épica e narrativas literárias)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f85"
+  },
+  "id": 169,
+  "Título do Livro": "Onde Os Craw-Dads Cantam",
+  "Autor": "Delia Owens",
+  "Gênero": "Ficção, Mistério",
+  "rating": null,
+  "Sentimento I": "Melancólico",
+  "Sentimento II": "Misterioso",
+  "Emoção I": "Empatia",
+  "Emoção II": "Suspense",
+  "Páginas": 384,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Onde-Os-Craw-Dads-Cantam/dp/8551008463",
+  "Sinopse": "Kya Clark cresceu sozinha nos pântanos da Carolina do Norte. Quando um jovem da cidade é encontrado morto, ela se torna a principal suspeita.",
+  "Público-Alvo": "Adultos (Fãs de ficção literária, mistério e dramas de natureza)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f86"
+  },
+  "id": 170,
+  "Título do Livro": "O Código Da Vinci",
+  "Autor": "Dan Brown",
+  "Gênero": "Thriller, Suspense",
+  "rating": null,
+  "Sentimento I": "Intrigante",
+  "Sentimento II": "Veloz",
+  "Emoção I": "Suspense",
+  "Emoção II": "Fascínio",
+  "Páginas": 489,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/C%C3%B3digo-Da-Vinci/dp/8575421220",
+  "Sinopse": "O professor Robert Langdon investiga o assassinato de um curador do Louvre e descobre uma conspiração que pode abalar os alicerces do Cristianismo.",
+  "Público-Alvo": "Adultos (Fãs de thriller e mistério histórico)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f87"
+  },
+  "id": 171,
+  "Título do Livro": "Cem Anos de Solidão",
+  "Autor": "Gabriel García Márquez",
+  "Gênero": "Ficção, Realismo Mágico",
+  "rating": null,
+  "Sentimento I": "Épico",
+  "Sentimento II": "Poético",
+  "Emoção I": "Admiração",
+  "Emoção II": "Melancolia",
+  "Páginas": 422,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/Cem-Anos-Solid%C3%A3o/dp/8535909656",
+  "Sinopse": "A saga da família Buendía ao longo de sete gerações na fictícia Macondo. Um romance sobre memória, solidão, destino e os ciclos da história humana.",
+  "Público-Alvo": "Adultos (Fãs de ficção literária e realismo mágico)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f88"
+  },
+  "id": 172,
+  "Título do Livro": "Duna",
+  "Autor": "Frank Herbert",
+  "Gênero": "Ficção Científica",
+  "rating": null,
+  "Sentimento I": "Épico",
+  "Sentimento II": "Político",
+  "Emoção I": "Fascínio",
+  "Emoção II": "Admiração",
+  "Páginas": 688,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/Duna/dp/8576574500",
+  "Sinopse": "No planeta desértico Arrakis, único lugar com a especiaria mais valiosa do universo, Paul Atreides se vê no centro de uma conspiração política que pode determinar o destino da galáxia.",
+  "Público-Alvo": "Adultos e Jovem Adulto (Fãs de ficção científica épica)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f89"
+  },
+  "id": 173,
+  "Título do Livro": "A Menina que Roubava Livros",
+  "Autor": "Markus Zusak",
+  "Gênero": "Ficção Histórica",
+  "rating": null,
+  "Sentimento I": "Comovente",
+  "Sentimento II": "Poético",
+  "Emoção I": "Tristeza",
+  "Emoção II": "Admiração",
+  "Páginas": 576,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/Menina-que-Roubava-Livros/dp/8532522785",
+  "Sinopse": "Narrada pela Morte, conta a história de Liesel Meminger, uma menina alemã que encontra consolo nos livros durante a Segunda Guerra Mundial.",
+  "Público-Alvo": "Adultos e Jovem Adulto (Fãs de ficção histórica e dramas literários)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f8a"
+  },
+  "id": 174,
+  "Título do Livro": "A Sombra do Vento",
+  "Autor": "Carlos Ruiz Zafón",
+  "Gênero": "Ficção, Mistério",
+  "rating": null,
+  "Sentimento I": "Nostálgico",
+  "Sentimento II": "Misterioso",
+  "Emoção I": "Fascínio",
+  "Emoção II": "Emoção",
+  "Páginas": 487,
+  "Tamanho do Livro": "Longo",
+  "url": "https://www.amazon.com.br/Sombra-Vento/dp/8528613399",
+  "Sinopse": "Na Barcelona pós-guerra, Daniel Sempere descobre um romance misterioso e mergulha numa teia de segredos, amores e tragédias ao tentar descobrir quem é o seu autor.",
+  "Público-Alvo": "Adultos (Fãs de ficção literária e mistério atmosférico)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f8b"
+  },
+  "id": 175,
+  "Título do Livro": "1984",
+  "Autor": "George Orwell",
+  "Gênero": "Ficção, Distopia",
+  "rating": null,
+  "Sentimento I": "Sombrio",
+  "Sentimento II": "Opressivo",
+  "Emoção I": "Angústia",
+  "Emoção II": "Revolta",
+  "Páginas": 328,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/1984-George-Orwell/dp/8535914533",
+  "Sinopse": "Numa sociedade totalitária controlada pelo Grande Irmão, Winston Smith começa a questionar o sistema e se apaixona, descobrindo o custo de pensar por si mesmo.",
+  "Público-Alvo": "Adultos e Jovem Adulto (Fãs de ficção política e distopia clássica)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f8c"
+  },
+  "id": 176,
+  "Título do Livro": "O Alquimista",
+  "Autor": "Paulo Coelho",
+  "Gênero": "Ficção, Fábula",
+  "rating": null,
+  "Sentimento I": "Inspirador",
+  "Sentimento II": "Reflexivo",
+  "Emoção I": "Esperança",
+  "Emoção II": "Determinação",
+  "Páginas": 163,
+  "Tamanho do Livro": "Curto",
+  "url": "https://www.amazon.com.br/Alquimista/dp/8532511015",
+  "Sinopse": "Santiago, um jovem pastor, segue um sonho até as Pirâmides do Egito e aprende que o verdadeiro tesouro está na jornada e no cumprimento de sua Lenda Pessoal.",
+  "Público-Alvo": "Adultos e Jovem Adulto (Leitores de ficção filosófica e inspiracional)"
+},
+{
+  "_id": {
+    "$oid": "6a1ccd3acc311f9dafe09f8d"
+  },
+  "id": 177,
+  "Título do Livro": "Verity",
+  "Autor": "Colleen Hoover",
+  "Gênero": "Thriller Psicológico, Romance",
+  "rating": null,
+  "Sentimento I": "Perturbador",
+  "Sentimento II": "Tenso",
+  "Emoção I": "Suspense",
+  "Emoção II": "Fascínio",
+  "Páginas": 336,
+  "Tamanho do Livro": "Médio",
+  "url": "https://www.amazon.com.br/Verity-Colleen-Hoover/dp/6555351667",
+  "Sinopse": "Lowen Ashby é contratada para concluir a série da autora Verity Crawford e encontra um manuscrito perturbador que revela verdades chocantes sobre Verity e sua família.",
+  "Público-Alvo": "Adultos (Fãs de thriller psicológico — para maiores de 18 anos)"
 }]
