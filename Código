@@ -13,6 +13,8 @@ Acesso: https://localhost:5443
 """
 
 import os, re, json, pickle, time, hashlib, ssl, threading, datetime, ipaddress, math
+import unicodedata
+import logging
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -27,23 +29,48 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 # ============================================================
-# CONFIGURAÇÕES GERAIS
+# LOGGING
 # ============================================================
-CERT_FILE  = "cert.pem"
-KEY_FILE   = "key.pem"
-HTTPS_PORT = 5443
-HTTP_PORT  = 5000
-CACHE_PATH    = "embeddings_cache.pkl"
-FEEDBACK_PATH = "feedback_usuario.json"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# ============================================================
+# CONFIGURAÇÕES GERAIS — classe centralizada
+# ============================================================
+class Config:
+    CERT_FILE     = "cert.pem"
+    KEY_FILE      = "key.pem"
+    HTTPS_PORT    = 5443
+    HTTP_PORT     = 5000
+    CACHE_PATH    = "embeddings_cache.pkl"
+    FEEDBACK_PATH = "feedback_usuario.json"
+    FEEDBACK_MIN_SCORE = -5          # limite antes de excluir livro do pool
+    MONGO_URI     = "mongodb://localhost:27017"
+    MONGO_TIMEOUT = 5000             # ms
+    MONGO_DB      = "admin"
+    MONGO_COL     = "Book_Dataset_V3"
+
+# Atalhos de compatibilidade (mantêm o código restante funcionando)
+CERT_FILE     = Config.CERT_FILE
+KEY_FILE      = Config.KEY_FILE
+HTTPS_PORT    = Config.HTTPS_PORT
+HTTP_PORT     = Config.HTTP_PORT
+CACHE_PATH    = Config.CACHE_PATH
+FEEDBACK_PATH = Config.FEEDBACK_PATH
 
 # ============================================================
 # HTTPS — certificado autoassinado via 'cryptography' (sem pyopenssl)
 # ============================================================
 def gerar_cert_autoassinado():
     if os.path.exists(CERT_FILE) and os.path.exists(KEY_FILE):
-        print(f"Certificado SSL existente encontrado ({CERT_FILE}).")
+        logger.info(f"Certificado SSL existente encontrado ({CERT_FILE}).")
         return
     try:
         from cryptography import x509
@@ -83,9 +110,9 @@ def gerar_cert_autoassinado():
             ))
         with open(CERT_FILE, "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
-        print(f"Certificado SSL autoassinado gerado com sucesso.")
+        logger.info("Certificado SSL autoassinado gerado com sucesso.")
     except ImportError:
-        print("Instale o pacote cryptography: pip install cryptography")
+        logger.error("Instale o pacote cryptography: pip install cryptography")
         raise
 
 # ============================================================
@@ -122,15 +149,24 @@ def rate_recomendar(ip): return _check_rate(_rate_recomendar, ip, 20)
 def rate_feedback(ip):   return _check_rate(_rate_feedback,   ip, 60)
 
 # ============================================================
-# 1. MONGODB
+# 1. MONGODB — conexão única (singleton)
 # ============================================================
+_mongo_client: MongoClient | None = None
+
+def _get_mongo_client() -> MongoClient:
+    """Retorna cliente MongoDB reutilizável (uma única conexão durante toda a execução)."""
+    global _mongo_client
+    if _mongo_client is None:
+        _mongo_client = MongoClient(Config.MONGO_URI, serverSelectionTimeoutMS=Config.MONGO_TIMEOUT)
+    return _mongo_client
+
 def carregar_dados():
-    client = MongoClient("mongodb://localhost:27017", serverSelectionTimeoutMS=5000)
+    client = _get_mongo_client()
     try:
         client.admin.command("ping")
     except ConnectionFailure as e:
         raise RuntimeError(f"MongoDB não está rodando: {e}")
-    collection = client["admin"]["Book_Dataset_V3"]
+    collection = client[Config.MONGO_DB][Config.MONGO_COL]
     docs = list(collection.find())
     df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore").reset_index(drop=True)
     scaler = MinMaxScaler()
@@ -160,7 +196,9 @@ SINONIMOS = {
 }
 
 MAPA_TERAPEUTICO = {
-    "triste":     "reconfortante esperança superação acolhimento cura leveza alegria renascimento",
+    "triste":     "reconfortante esperança superação acolhimento cura leveza alegria renascimento "
+                  "autoajuda bem-estar saúde mental resiliência recomeço força interior "
+                  "motivação consolo empatia compaixão",
     "ansioso":    "calma serenidade equilíbrio paz clareza acolhimento leveza tranquilidade",
     "entediado":  "aventura descoberta fascinante emocionante surpreendente imaginação viagem",
     "feliz":      "alegre otimista esperança celebração conquista eufórico",
@@ -173,8 +211,12 @@ MAPA_TERAPEUTICO = {
 
 CONTRASTES = ["mas", "porém", "contudo", "entretanto", "embora", "apesar", "todavia"]
 
+import unicodedata  # adicione no topo do arquivo junto dos outros imports
+
 def limpar_texto(texto):
     texto = str(texto).lower().strip()
+    # Normaliza para NFC: garante que ã, ç, é etc. sejam sempre a mesma forma
+    texto = unicodedata.normalize("NFC", texto)
     texto = re.sub(r'[^\w\s]', ' ', texto, flags=re.UNICODE)
     texto = re.sub(r'\b\d+\b', ' ', texto)
     return re.sub(r'\s+', ' ', texto).strip()
@@ -198,12 +240,20 @@ EMOCOES_KEYWORDS = {
     "feliz":      ["feliz","felicidade","alegre","alegria","animado","contente","bem","ótimo",
                    "eufórico","empolgado","esperançoso","positivo","satisfeito","entusiasmado",
                    "realizado","celebrar","comemorando","promoção","conquista","felicíssimo"],
-    "triste":     ["triste","tristeza","mal","deprimido","depressão","melancólico","melancolia",
-                   "chateado","abatido","desmotivado","desolado","angustiado","angústia",
-                   "sofrendo","sofrimento","luto","saudade","vazio","perdido","sozinho",
-                   "solidão","isolado","abandonado","magoado","mágoa","decepcionado","decepção",
-                   "frustrado","frustração","chorando","choro","lágrimas","dor","péssimo",
-                   "péssima","horrível","terrível","arrasado","arrasada","destruído","destruída"],
+    "triste":     ["triste","tristeza","tristo","mal","deprimido","deprimida","depressão",
+                   "depressivo","depressiva","em depressão","com depressão","tenho depressão",
+                   "melancólico","melancólica","melancolia","chateado","chateada","abatido",
+                   "abatida","desmotivado","desmotivada","desolado","desolada","angustiado",
+                   "angustiada","angústia","sofrendo","sofrimento","luto","saudade","vazio",
+                   "vazia","perdido","perdida","sozinho","sozinha","solidão","isolado","isolada",
+                   "abandonado","abandonada","magoado","magoada","mágoa","decepcionado",
+                   "decepcionada","decepção","frustrado","frustrada","frustração","chorando",
+                   "choro","lágrimas","dor","péssimo","péssima","horrível","terrível",
+                   "arrasado","arrasada","destruído","destruída","sem esperança","sem saída",
+                   "esgotado","esgotada","exausto","exausta","pesado","pesada","sufocado",
+                   "sufocada","não consigo","nao consigo","não aguento","nao aguento",
+                   "quebrado","quebrada","devastado","devastada","sem energia","sem ânimo",
+                   "sem animo","triste demais","muito triste","tão triste"],
     "ansioso":    ["ansioso","ansiedade","nervoso","nervosismo","preocupado","preocupação",
                    "tenso","tensão","inquieto","estressado","estresse","agitado","apreensivo",
                    "inseguro","insegurança","assustado","medo","raiva","irritado","irritação",
@@ -251,16 +301,39 @@ CRISIS_RESPOSTA = (
 def detectar_crise(texto):
     return any(kw in texto.lower() for kw in CRISIS_KEYWORDS)
 
+def _normalizar_kw(texto):
+    """Normaliza unicode NFC e lowercase — usado para comparar keywords."""
+    return unicodedata.normalize("NFC", str(texto).lower().strip())
+
+# Pré-computa keywords normalizadas uma vez só (fora da função, no módulo)
+_EMOCOES_KW_NORM = {
+    emocao: [_normalizar_kw(kw) for kw in kws]
+    for emocao, kws in EMOCOES_KEYWORDS.items()
+}
+
 def detectar_emocoes(texto):
     texto_limpo = limpar_texto(texto)
-    contagem = {}
+    # Também normaliza NFC diretamente no texto original para pegar variações
+    texto_nfc   = _normalizar_kw(texto)
+    contagem    = {}
+
     segmentos = re.split(r'[,;.]|\b(?:mas|porém|contudo|entretanto|embora)\b', texto_limpo)
     segmentos = [s.strip() for s in segmentos if s.strip()]
+    if not segmentos:
+        segmentos = [texto_limpo]
+
     for seg in segmentos:
         palavras = set(seg.split())
         negado   = bool(palavras & NEGACOES)
-        for emocao, keywords in EMOCOES_KEYWORDS.items():
-            hits = sum(1 for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', seg))
+        for emocao, keywords_norm in _EMOCOES_KW_NORM.items():
+            hits = 0
+            for kw in keywords_norm:
+                # Match exato por word boundary
+                if re.search(r'\b' + re.escape(kw) + r'\b', seg):
+                    hits += 1
+                # Fallback: match parcial para palavras compostas como "estou com depressão"
+                elif len(kw) >= 5 and kw in seg:
+                    hits += 0.8
             if hits == 0:
                 continue
             if negado:
@@ -269,6 +342,7 @@ def detectar_emocoes(texto):
                     contagem[oposto] = contagem.get(oposto, 0) + hits * 0.5
             else:
                 contagem[emocao] = contagem.get(emocao, 0) + hits
+
     if not contagem:
         return [("neutro", 1.0)]
     total    = sum(contagem.values())
@@ -314,9 +388,14 @@ MODELO_NOME = "paraphrase-multilingual-MiniLM-L12-v2"
 
 def _hash_dataset(df):
     conteudo = '|'.join(
-        str(t) + str(s)
-        for t, s in zip(df.get("Título do Livro", pd.Series()).fillna(""),
-                        df.get("Sinopse", pd.Series()).fillna(""))
+        str(t) + str(s) + str(e1) + str(e2) + str(sent)
+        for t, s, e1, e2, sent in zip(
+            df.get("Título do Livro", pd.Series()).fillna(""),
+            df.get("Sinopse",         pd.Series()).fillna(""),
+            df.get("Emoção I",        pd.Series()).fillna(""),
+            df.get("Emoção II",       pd.Series()).fillna(""),
+            df.get("Sentimento I",    pd.Series()).fillna(""),
+        )
     )
     return hashlib.md5(conteudo.encode()).hexdigest()
 
@@ -328,28 +407,37 @@ def carregar_modelo_embeddings(df):
         with open(CACHE_PATH, "rb") as f:
             cache = pickle.load(f)
         if cache.get("modelo") == MODELO_NOME and cache.get("hash_dataset") == hash_atual:
-            print(f"Embeddings do cache. Shape: {cache['embeddings'].shape}")
+            logger.info(f"Embeddings do cache. Shape: {cache['embeddings'].shape}")
             return modelo, cache["embeddings"]
-        print("Cache desatualizado. Recomputando...")
+        logger.warning("Cache desatualizado. Recomputando...")
     except Exception:
         pass
-    print("Computando embeddings (primeira vez ~30s)...")
+    logger.info("Computando embeddings (primeira vez ~30s)...")
     embs = modelo.encode(df["perfil_emocional"].tolist(),
                          show_progress_bar=True, batch_size=32, normalize_embeddings=True)
     with open(CACHE_PATH, "wb") as f:
         pickle.dump({"modelo": MODELO_NOME, "hash_dataset": hash_atual, "embeddings": embs}, f)
-    print(f"Embeddings salvos. Shape: {embs.shape}")
+    logger.info(f"Embeddings salvos. Shape: {embs.shape}")
     return modelo, embs
 
 # ============================================================
-# 5. CLASSIFICADOR
+# 5. CLASSIFICADOR — fallback TF-IDF + Regressão Logística
 # ============================================================
 def treinar_classificador(df):
-    df_clf   = df[["Gênero", "Emoção II", "Sentimento I"]].dropna()
-    contagem = df_clf["Sentimento I"].value_counts()
-    df_clf   = df_clf[df_clf["Sentimento I"].isin(contagem[contagem >= 2].index)]
-    X = df_clf[["Gênero", "Emoção II"]].apply(
-        lambda r: limpar_texto(' '.join(r.astype(str))), axis=1)
+    cols_feat = ["Gênero", "Emoção I", "Emoção II", "Sinopse"]
+    df_clf    = df[cols_feat + ["Sentimento I"]].dropna(subset=["Sentimento I"])
+    contagem  = df_clf["Sentimento I"].value_counts()
+    df_clf    = df_clf[df_clf["Sentimento I"].isin(contagem[contagem >= 2].index)]
+
+    def montar_features(row):
+        genero   = limpar_texto(str(row.get("Gênero",   "")))
+        emocao1  = limpar_texto(str(row.get("Emoção I", "")))
+        emocao2  = limpar_texto(str(row.get("Emoção II","")))
+        sinopse  = limpar_texto(str(row.get("Sinopse",  ""))[:200])
+        # Repetir campos mais importantes para dar mais peso no TF-IDF
+        return f"{genero} {genero} {emocao1} {emocao1} {emocao2} {sinopse}"
+
+    X = df_clf.apply(montar_features, axis=1)
     y = df_clf["Sentimento I"]
     pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(ngram_range=(1, 2), min_df=1, max_features=5000)),
@@ -359,18 +447,28 @@ def treinar_classificador(df):
     test_n = max(int(n * 0.2), n_classes + 1)
     if n < 10 or test_n >= int(n * 0.6):
         pipeline.fit(X, y)
-        print(f"Classificador treinado ({n} amostras, {n_classes} classes).")
+        logger.info(f"Classificador treinado ({n} amostras, {n_classes} classes). "
+                    f"Dataset pequeno — métricas requerem mais dados.")
     else:
         n_folds = min(3, n // (n_classes + 1))
         if n_folds >= 2:
             try:
                 scores = cross_val_score(pipeline, X, y, cv=n_folds, scoring="accuracy")
-                print(f"Classificador CV ({n_folds}-fold): {scores.mean():.2f} ± {scores.std():.2f}")
+                logger.info(f"Classificador CV ({n_folds}-fold): "
+                            f"accuracy={scores.mean():.2f} ± {scores.std():.2f}")
             except Exception as e:
-                print(f"Cross-val ignorada: {e}")
-        X_tr, _, y_tr, _ = train_test_split(X, y, test_size=test_n, random_state=42, stratify=y)
+                logger.warning(f"Cross-val ignorada: {e}")
+        X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=test_n, random_state=42, stratify=y)
         pipeline.fit(X_tr, y_tr)
-        print(f"Classificador treinado ({n} amostras, {n_classes} classes).")
+        y_pred = pipeline.predict(X_te)
+        acc  = accuracy_score(y_te, y_pred)
+        prec = precision_score(y_te, y_pred, average="weighted", zero_division=0)
+        rec  = recall_score(y_te, y_pred, average="weighted", zero_division=0)
+        f1   = f1_score(y_te, y_pred, average="weighted", zero_division=0)
+        logger.info(
+            f"Classificador treinado ({n} amostras, {n_classes} classes) | "
+            f"Accuracy={acc:.2f} | Precision={prec:.2f} | Recall={rec:.2f} | F1={f1:.2f}"
+        )
     return pipeline
 
 # ============================================================
@@ -391,8 +489,28 @@ def mmr_rerank(query_emb, candidatos_idx, embeddings, top_k=10, lambda_param=0.7
     return selecionados
 
 # ============================================================
-# 7. RECOMENDAÇÃO
+# 7. RECOMENDAÇÃO — pesos adaptativos por emoção dominante
 # ============================================================
+# Lambda MMR por tipo de sentimento:
+#   simples      → 0.80  (alta relevância, menos diversidade necessária)
+#   ambíguo      → 0.60  (equilíbrio entre relevância e diversidade)
+#   contraditório → 0.50  (máxima diversidade para capturar tensão emocional)
+MMR_LAMBDA = {"simples": 0.80, "ambíguo": 0.60, "contraditório": 0.50}
+
+# Pesos semântico × rating adaptativos por emoção dominante:
+#   emoções "pesadas" (triste, ansioso) priorizam semântica para garantir match terapêutico.
+#   emoções "leves" (feliz, inspirado) toleram mais influência do rating.
+PESOS_POR_EMOCAO = {
+    "triste":     (0.90, 0.10),
+    "ansioso":    (0.90, 0.10),
+    "reflexivo":  (0.85, 0.15),
+    "nostálgico": (0.80, 0.20),
+    "romântico":  (0.75, 0.25),
+    "entediado":  (0.70, 0.30),
+    "inspirado":  (0.70, 0.30),
+    "feliz":      (0.70, 0.30),
+    "neutro":     (0.70, 0.30),
+}
 def _calcular_pre_filtro(n):
     if n <= 50:   return n
     if n <= 200:  return max(30, n // 2)
@@ -400,8 +518,15 @@ def _calcular_pre_filtro(n):
     return min(200, n // 8)
 
 def recomendar_livros(query, emocoes, tipo_sentimento, top_k=10,
-                      peso_semantico=0.7, peso_rating=0.3,
-                      usar_mmr=True, lambda_mmr=0.7):
+                      peso_semantico=None, peso_rating=None,
+                      usar_mmr=True, lambda_mmr=None):
+    # Pesos adaptativos: sobrescreve padrão fixo 0.7/0.3 com base na emoção dominante
+    emocao_dom = emocoes[0][0] if emocoes else "neutro"
+    if peso_semantico is None or peso_rating is None:
+        peso_semantico, peso_rating = PESOS_POR_EMOCAO.get(emocao_dom, (0.70, 0.30))
+    # Lambda MMR adaptativo por tipo de sentimento
+    if lambda_mmr is None:
+        lambda_mmr = MMR_LAMBDA.get(tipo_sentimento, 0.70)
     pre_filtro  = _calcular_pre_filtro(len(df))
     queries_exp = expandir_query_ambigua(query, emocoes)
     pesos_emoc  = [p for _, p in emocoes[:len(queries_exp)]]
@@ -421,7 +546,7 @@ def recomendar_livros(query, emocoes, tipo_sentimento, top_k=10,
     df_res["_score_sem"]   = sims
     df_res["_score_final"] = score_hibrido
     top_idx = np.argsort(score_hibrido)[::-1][:pre_filtro].tolist()
-    lambda_efetivo = lambda_mmr if tipo_sentimento == "simples" else max(0.45, lambda_mmr - 0.1)
+    lambda_efetivo = lambda_mmr
     idx_final = (
         mmr_rerank(emb_final, top_idx, embeddings_livros, top_k=top_k, lambda_param=lambda_efetivo)
         if usar_mmr and len(top_idx) > top_k else top_idx[:top_k]
@@ -515,7 +640,7 @@ Apenas prosa fluida, sem bullet points."""
 
     except Exception as e:
         erro = str(e)
-        print(f"Erro na API Gemini: {erro}")
+        logger.error(f"Erro na API Gemini: {erro}")
         if "api_key" in erro.lower() or "invalid" in erro.lower():
             return "⚠️ Chave Gemini inválida."
         if "quota" in erro.lower() or "rate" in erro.lower():
@@ -540,6 +665,10 @@ def registrar_feedback(titulo, util, query):
     return True, "ok"
 
 def livros_penalizados():
+    """
+    Retorna livros com score líquido abaixo do limite configurado em Config.FEEDBACK_MIN_SCORE.
+    Evita exclusão por um único feedback negativo acidental.
+    """
     try:
         with open(FEEDBACK_PATH, "r", encoding="utf-8") as f:
             dados = json.load(f)
@@ -549,7 +678,7 @@ def livros_penalizados():
     for item in dados:
         t = item["titulo"]
         contagem[t] = contagem.get(t, 0) + (1 if item["util"] else -1)
-    return {t for t, s in contagem.items() if s < 0}
+    return {t for t, s in contagem.items() if s <= Config.FEEDBACK_MIN_SCORE}
 
 def ler_historico_feedback():
     try:
@@ -807,39 +936,62 @@ def debug_emocao():
 
 @app.route("/status")
 def status():
-    return jsonify({"status": "ok", "https": True, "ia_habilitada": _API_KEY_VALIDA, "livros": len(df)})
+    # Lê métricas reais de feedback
+    try:
+        with open(Config.FEEDBACK_PATH, "r", encoding="utf-8") as f:
+            fb_dados = json.load(f)
+        total_fb   = len(fb_dados)
+        uteis      = sum(1 for x in fb_dados if x.get("util"))
+        nao_uteis  = total_fb - uteis
+    except FileNotFoundError:
+        total_fb = uteis = nao_uteis = 0
+
+    # Verifica existência do cache de embeddings
+    cache_existe = os.path.exists(Config.CACHE_PATH)
+
+    return jsonify({
+        "status":           "ok",
+        "https":            True,
+        "ia_habilitada":    _API_KEY_VALIDA,
+        "livros":           len(df),
+        "feedback_total":   total_fb,
+        "feedback_uteis":   uteis,
+        "feedback_nao_uteis": nao_uteis,
+        "embeddings_cache": cache_existe,
+        "modelo":           MODELO_NOME,
+    })
 
 # ============================================================
 # 12. INICIALIZAÇÃO
 # ============================================================
-print("Carregando dados do MongoDB...")
+logger.info("Carregando dados do MongoDB...")
 df = carregar_dados()
-print(f"Dataset: {len(df)} livros")
+logger.info(f"Dataset: {len(df)} livros")
 
 _titulos_validos = set(df["Título do Livro"].dropna().tolist())
 
 if _API_KEY_VALIDA:
-    print("✅ GEMINI_API_KEY configurada — análise de IA habilitada.")
+    logger.info("✅ GEMINI_API_KEY configurada — análise de IA habilitada.")
 else:
-    print("ℹ️  GEMINI_API_KEY não definida.")
-    print("    No CMD Windows execute ANTES de rodar o script:")
-    print("    set GEMINI_API_KEY=AIzaSy...suachave")
-    print("    Chave gratuita em: aistudio.google.com/apikey")
+    logger.warning("ℹ️  GEMINI_API_KEY não definida.")
+    logger.warning("    No CMD Windows execute ANTES de rodar o script:")
+    logger.warning("    set GEMINI_API_KEY=AIzaSy...suachave")
+    logger.warning("    Chave gratuita em: aistudio.google.com/apikey")
 
-print("Carregando modelo e embeddings...")
+logger.info("Carregando modelo e embeddings...")
 modelo, embeddings_livros = carregar_modelo_embeddings(df)
 
-print("Treinando classificador...")
+logger.info("Treinando classificador...")
 pipeline_clf = treinar_classificador(df)
 
 pre_filtro_info = _calcular_pre_filtro(len(df))
-print(f"Pre-filtro dinâmico: {pre_filtro_info} candidatos para {len(df)} livros")
+logger.info(f"Pre-filtro dinâmico: {pre_filtro_info} candidatos para {len(df)} livros")
 
 gerar_cert_autoassinado()
 
-print(f"\n✅ Tudo pronto!")
-print(f"   🔒 HTTPS → https://localhost:{HTTPS_PORT}")
-print(f"   🔀 HTTP  → http://localhost:{HTTP_PORT}  (redireciona para HTTPS)\n")
+logger.info(f"\n✅ Tudo pronto!")
+logger.info(f"   🔒 HTTPS → https://localhost:{HTTPS_PORT}")
+logger.info(f"   🔀 HTTP  → http://localhost:{HTTP_PORT}  (redireciona para HTTPS)\n")
 
 if __name__ == "__main__":
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
