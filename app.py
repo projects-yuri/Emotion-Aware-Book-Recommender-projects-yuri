@@ -64,10 +64,11 @@ class Config:
     CACHE_PATH    = "embeddings_cache.pkl"
     FEEDBACK_PATH = "feedback_usuario.json"
     FEEDBACK_MIN_SCORE = -5          # limite antes de excluir livro do pool
-    MONGO_URI     = "mongodb://localhost:27017"
-    MONGO_TIMEOUT = 5000             # ms
-    MONGO_DB      = "admin"
-    MONGO_COL     = "Book_Dataset_V3"
+    MONGO_URI = os.environ["MONGO_URI"]
+    MONGO_TIMEOUT = 10000
+    MONGO_DB = "projects-yuri"
+    MONGO_COL = "Yuri"
+
 
 # Atalhos de compatibilidade (mantêm o código restante funcionando)
 CERT_FILE     = Config.CERT_FILE
