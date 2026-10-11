@@ -66,8 +66,8 @@ class Config:
     FEEDBACK_MIN_SCORE = -5          # limite antes de excluir livro do pool
     MONGO_URI = os.environ["MONGO_URI"]
     MONGO_TIMEOUT = 10000
-    MONGO_DB = "projects-yuri"
-    MONGO_COL = "Yuri"
+    MONGO_DB = "dataset"
+    MONGO_COL = "dataset"
 
 
 # Atalhos de compatibilidade (mantêm o código restante funcionando)
