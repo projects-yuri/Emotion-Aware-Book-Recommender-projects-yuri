@@ -24,16 +24,16 @@ COLLECTION_NAME = os.getenv("MONGO_COL", "dataset")
 
 STYLES = """
 <style>
-:root{--bg:#f7f8f3;--surface:#fffefa;--surface-2:#f0f2eb;--ink:#283f37;--muted:#606e65;--line:#dce3d8;--accent:#396550;--sage:#e7efdf;--lilac:#efebf6;--pink:#f7e9e5;--yellow:#f5efd8}
+:root{--bg:#17231d;--surface:#223129;--surface-2:#2b3c32;--ink:#eef2e9;--muted:#b9c5ba;--line:#405447;--accent:#bad3ad;--sage:#324536;--lilac:#40394b;--pink:#493936;--yellow:#46432d}
 .stApp{background:var(--bg);color:var(--ink);font-family:'Segoe UI',Arial,sans-serif}
-[data-testid="stHeader"]{background:rgba(247,248,243,.92)}
+[data-testid="stHeader"]{background:rgba(23,35,29,.96)}
 [data-testid="stMainBlockContainer"]{max-width:1190px;padding-top:2.1rem;padding-bottom:4rem}
-[data-testid="stSidebar"]{background:#f1f4ec;border-right:1px solid var(--line)}
+[data-testid="stSidebar"]{background:#1d2b23;border-right:1px solid var(--line)}
 [data-testid="stSidebar"] h2{font-family:Georgia,serif!important;color:var(--ink)}
 h1,h2,h3{font-family:Georgia,serif!important;color:var(--ink)!important;font-weight:400!important}
 hr{border-color:var(--line)!important}
 .brand{display:flex;align-items:center;gap:12px;padding:8px 0 22px;border-bottom:1px solid var(--line);margin-bottom:25px}
-.brand-icon{background:var(--accent);color:white;border-radius:13px;padding:9px 12px;font-size:23px}
+.brand-icon{background:#b9d1ad;color:#1d3026;border-radius:13px;padding:9px 12px;font-size:23px}
 .brand-name{font:23px Georgia,serif;color:var(--ink)}
 .brand-sub{font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;font-weight:700}
 .hero-main{padding:29px 4px 25px}.eyebrow{color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:700}
@@ -54,8 +54,8 @@ hr{border-color:var(--line)!important}
 [data-testid="stVerticalBlockBorderWrapper"] > div{border-color:var(--line)!important}
 div[data-testid="stForm"]{border:1px solid var(--line)!important;background:var(--surface);border-radius:22px;padding:25px}
 [data-testid="stWidgetLabel"] p{font-size:12px!important;color:var(--ink)!important;font-weight:600}
-.stTextArea textarea,.stTextInput input,[data-baseweb="select"]>div{background:#f8f9f5!important;border-color:var(--line)!important;border-radius:11px!important}
-.stButton button[kind="primary"],div[data-testid="stFormSubmitButton"] button{background:var(--accent);color:#fff!important;border:1px solid var(--accent);border-radius:11px;min-height:45px}
+.stTextArea textarea,.stTextInput input,[data-baseweb="select"]>div{background:#1e2c24!important;border-color:var(--line)!important;border-radius:11px!important}
+.stButton button[kind="primary"],div[data-testid="stFormSubmitButton"] button{background:var(--accent);color:#18251d!important;border:1px solid var(--accent);border-radius:11px;min-height:45px}
 .stButton button, .stDownloadButton button, .stLinkButton a{border-radius:11px;border-color:var(--line);font-size:12px}
 .stButton button:hover,.stDownloadButton button:hover,.stLinkButton a:hover{border-color:var(--accent);color:var(--accent)}
 [data-testid="stTabs"] button{font-size:13px!important;color:var(--muted)!important}
@@ -75,6 +75,37 @@ div[data-testid="stForm"]{border:1px solid var(--line)!important;background:var(
 .metricline{color:var(--muted);font-size:12px;padding:10px 0 18px}
 .footer{font-size:11px;color:var(--muted);padding:25px 0;border-top:1px solid var(--line);margin-top:35px}
 @media(max-width:730px){.hero-art{height:205px}.hero-main h1{font-size:37px!important}[data-testid="stMainBlockContainer"]{padding-left:1rem;padding-right:1rem}.hero-book{transform:scale(.85)}}
+
+/* Tema verde-escuro inspirado na prévia original */
+html,body,.stApp,[data-testid="stAppViewContainer"]{background:#17231d!important;color:#eef2e9!important}
+[data-testid="stHeader"],[data-testid="stToolbar"]{background:#17231d!important}
+[data-testid="stSidebar"],[data-testid="stSidebarContent"]{background:#1d2b23!important}
+.stApp p,.stApp label,.stApp span,.stApp div{color:inherit}
+[data-testid="stWidgetLabel"] p,[data-testid="stMarkdownContainer"] p{color:#dce6dc}
+.stTextArea textarea,.stTextInput input,[data-baseweb="select"]>div,
+[data-baseweb="input"] input,[data-baseweb="textarea"] textarea{
+background:#1e2c24!important;color:#eef2e9!important;border-color:#405447!important
+}
+.stTextArea textarea::placeholder,.stTextInput input::placeholder{color:#a5b5aa!important}
+[data-baseweb="popover"]>div,[role="listbox"],[data-baseweb="menu"]{background:#27382e!important;color:#eef2e9!important}
+[data-baseweb="select"] svg{fill:#bad3ad!important}
+.stButton button[kind="secondary"],.stDownloadButton button{
+background:#26382d!important;color:#eef2e9!important;border-color:#405447!important
+}
+.stButton button[kind="primary"],div[data-testid="stFormSubmitButton"] button{
+background:#bad3ad!important;color:#17231d!important;border-color:#bad3ad!important
+}
+.stButton button[kind="primary"]:hover,div[data-testid="stFormSubmitButton"] button:hover{
+background:#d0e2c8!important;color:#17231d!important
+}
+[data-testid="stTabs"] [role="tablist"]{border-bottom:1px solid #405447}
+[data-testid="stTabs"] button[aria-selected="true"]{color:#bad3ad!important;border-bottom-color:#bad3ad!important}
+[data-testid="stExpander"]{background:#223129;border:1px solid #405447;border-radius:12px}
+[data-testid="stAlert"]{background:#283d30}
+.book{box-shadow:0 8px 28px #0000001a}
+.hero-orbit:after{border-color:#536a59}
+.hero-caption{color:#eef2e9}
+
 </style>
 """
 st.markdown(STYLES, unsafe_allow_html=True)
