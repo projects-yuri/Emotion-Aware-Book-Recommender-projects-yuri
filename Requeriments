@@ -1,6 +1,6 @@
 # ============================================================
-# RECOMENDADOR LITERÁRIO — Dependências
-# Para instalar tudo de uma vez, rode no terminal:
+# BOOK RECOMMENDATION TOOL — Dependencies
+# To install everything at once, run the following in the terminal:
 # pip install -r requirements.txt
 # ============================================================
 
