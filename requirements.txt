@@ -1,0 +1,12 @@
+# Emotion Book - Dependencies
+
+streamlit
+flask
+pymongo
+sentence-transformers
+scikit-learn
+numpy
+pandas
+anthropic
+google-generativeai
+cryptography
