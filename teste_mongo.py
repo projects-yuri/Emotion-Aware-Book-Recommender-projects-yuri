@@ -33,8 +33,8 @@ if st.button("Testar conexão"):
         st.success(f"Documentos encontrados: {total}")
 
     except ServerSelectionTimeoutError as e:
-    st.error("Falha na conexão com MongoDB Atlas")
-    st.code(str(e))
+        st.error("Falha na conexão com MongoDB Atlas")
+        st.code(str(e)
 
     except OperationFailure as e:
         st.error(
