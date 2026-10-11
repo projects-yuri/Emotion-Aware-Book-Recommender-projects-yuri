@@ -8,7 +8,12 @@ from pymongo.errors import (
     OperationFailure,
 )
 
-st.title("Diagnóstico MongoDB Atlas")
+st.set_page_config(
+    page_title="Diagnóstico MongoDB Atlas",
+    page_icon="🔍"
+)
+
+st.title("🔍 Diagnóstico MongoDB Atlas")
 
 uri = os.environ.get("MONGO_URI")
 
@@ -17,30 +22,43 @@ if not uri:
     st.stop()
 
 if st.button("Testar conexão"):
+    client = None
+
     try:
-        client = MongoClient(
-            uri,
-            server_api=ServerApi("1"),
-            serverSelectionTimeoutMS=10000,
-            connectTimeoutMS=10000,
-        )
+        with st.spinner("Conectando ao MongoDB Atlas..."):
+            client = MongoClient(
+                uri,
+                server_api=ServerApi("1"),
+                serverSelectionTimeoutMS=10000,
+                connectTimeoutMS=10000,
+            )
 
-        client.admin.command("ping")
-        st.success("Conexão com o MongoDB estabelecida!")
+            client.admin.command("ping")
 
-        colecao = client["dataset"]["dataset"]
-        total = colecao.count_documents({})
-        st.success(f"Documentos encontrados: {total}")
+            st.success("MongoDB conectado com sucesso!")
+
+            colecao = client["dataset"]["dataset"]
+            total = colecao.count_documents({})
+
+            st.success(f"Documentos encontrados: {total}")
 
     except ServerSelectionTimeoutError as e:
         st.error("Falha na conexão com MongoDB Atlas")
-        st.code(str(e)
+        st.warning("Possível problema de rede, DNS ou cluster.")
+
+        st.subheader("Detalhes do erro")
+        # Exiba detalhes apenas em ambiente privado.
+        # Logs podem conter informações de infraestrutura.
+        st.code(str(e))
 
     except OperationFailure as e:
-        st.error(
-            f"Falha de autenticação ou permissão. "
-            f"Código MongoDB: {e.code}"
-        )
+        st.error("Falha de autenticação ou permissão.")
+        st.write(f"Código MongoDB: {e.code}")
 
     except Exception as e:
-        st.error(f"Tipo de erro: {type(e).__name__}")
+        st.error("Erro inesperado.")
+        st.write(f"Tipo: {type(e).__name__}")
+
+    finally:
+        if client is not None:
+            client.close()
