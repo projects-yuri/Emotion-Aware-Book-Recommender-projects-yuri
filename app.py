@@ -80,7 +80,7 @@ div[data-testid="stForm"]{border:1px solid var(--line)!important;background:var(
 html,body,.stApp,[data-testid="stAppViewContainer"]{background:#17231d!important;color:#eef2e9!important}
 [data-testid="stHeader"],[data-testid="stToolbar"]{background:#17231d!important}
 [data-testid="stSidebar"],[data-testid="stSidebarContent"]{background:#1d2b23!important}
-.stApp p,.stApp label,.stApp span,.stApp div{color:inherit}
+/* Não forçar herança global: capas pastéis usam texto escuro */
 [data-testid="stWidgetLabel"] p,[data-testid="stMarkdownContainer"] p{color:#dce6dc}
 .stTextArea textarea,.stTextInput input,[data-baseweb="select"]>div,
 [data-baseweb="input"] input,[data-baseweb="textarea"] textarea{
@@ -105,6 +105,33 @@ background:#d0e2c8!important;color:#17231d!important
 .book{box-shadow:0 8px 28px #0000001a}
 .hero-orbit:after{border-color:#536a59}
 .hero-caption{color:#eef2e9}
+
+
+/* CONTRASTE: texto escuro apenas nas capas claras */
+.stApp .hero-book,.stApp .hero-book.one{color:#283f37!important}
+.stApp .hero-book.two{color:#403650!important}
+.stApp .hero-book.three{color:#523d35!important}
+.stApp .hero-book *,.stApp .cover-area *,.stApp .cover-object *{color:inherit!important}
+.stApp .cover-area,.stApp .cover-object{color:var(--coverink)!important}
+.stApp .hero-caption,.stApp .hero-caption *{color:#eef2e9!important}
+/* Botões verdes selecionados: fundo claro, texto e ícones escuros */
+.stApp [data-testid="stButton"] button[kind="primary"],
+.stApp [data-testid="stFormSubmitButton"] button,
+.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"]{
+ background:#bad3ad!important;color:#18271e!important;border-color:#bad3ad!important;
+}
+.stApp [data-testid="stButton"] button[kind="primary"] *,
+.stApp [data-testid="stFormSubmitButton"] button *,
+.stApp [data-testid="stButton"] button[data-testid="stBaseButton-primary"] *{color:#18271e!important;fill:#18271e!important}
+.stApp [data-testid="stButton"] button[kind="secondary"] *,
+.stApp [data-testid="stDownloadButton"] button *{color:#eef2e9!important}
+/* Texto de descrição e labels sobre fundo escuro */
+.stApp .panel-caption,.stApp .metricline,.stApp .book-synopsis,.stApp .book-author,.stApp .book-foot,.stApp .footer,
+.stApp .hero-main p,.stApp .side-panel p{color:#cbd8cd!important}
+.stApp .brand-name,.stApp .panel-head,.stApp .side-panel h3,.stApp .book h3{color:#eef2e9!important}
+.stApp .book-genre,.stApp .eyebrow,.stApp .hero-main h1 em{color:#bad3ad!important}
+.stApp .hero-main h1{color:#eef2e9!important}
+.stApp [data-testid="stWidgetLabel"] p{color:#eef2e9!important}
 
 </style>
 """
