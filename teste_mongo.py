@@ -32,11 +32,9 @@ if st.button("Testar conexão"):
         total = colecao.count_documents({})
         st.success(f"Documentos encontrados: {total}")
 
-    except ServerSelectionTimeoutError:
-        st.error(
-            "Timeout: verifique o endereço do cluster, "
-            "Network Access e a disponibilidade do Atlas."
-        )
+    except ServerSelectionTimeoutError as e:
+    st.error("Falha na conexão com MongoDB Atlas")
+    st.code(str(e))
 
     except OperationFailure as e:
         st.error(
